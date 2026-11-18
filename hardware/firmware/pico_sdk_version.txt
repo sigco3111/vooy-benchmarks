@@ -1,0 +1,4 @@
+Pico SDK 2.2.0 (tag 2.2.0, released 2025-07-29)
+Source: https://github.com/raspberrypi/pico-sdk/releases/tag/2.2.0
+Build with board pico2 (set in CMakeLists.txt). Toolchain: arm-none-eabi-gcc (version as shipped with SDK 2.2.0 installer), CMake 3.13+, Ninja or Make.
+Note: pico-sdk 2.3.1 also exists; this project pins 2.2.0 until the upgrade is tested on hardware.
