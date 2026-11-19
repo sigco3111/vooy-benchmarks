@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vooy Benchmarks · 다섯 과제 한눈에 보기</title>
+<meta name="description" content="Vooy가 같은 다섯 과제를 구현한 결과와 검증 기록을 한 페이지에 모았습니다.">
+<style>
+:root{
+  --bg:#f4f1ea; --panel:#fffdf8; --ink:#1d2320; --sub:#5b655f; --line:#d9d3c5;
+  --accent:#0f6b5c; --accent-ink:#ffffff; --warn:#a4561a; --warn-bg:#fbeedd; --ok-bg:#e1f1ec;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#141815; --panel:#1c221e; --ink:#e9eee9; --sub:#a3aea6; --line:#323b35;
+  --accent:#58c4ae; --accent-ink:#0d1512; --warn:#e8a566; --warn-bg:#2d2418; --ok-bg:#173029;}
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+header.top{padding:56px 0 28px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:13px;letter-spacing:.08em;color:var(--sub);text-transform:uppercase}
+h1{font-size:clamp(28px,5vw,44px);line-height:1.2;margin:10px 0 14px;letter-spacing:-.02em}
+.lead{max-width:680px;color:var(--sub);font-size:17px;margin:0}
+.notice{margin-top:22px;padding:14px 16px;border:1px solid var(--line);background:var(--panel);border-radius:10px;font-size:14px;color:var(--sub)}
+.notice b{color:var(--ink)}
+nav.jump{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+nav.jump a{font-size:14px;text-decoration:none;color:var(--ink);border:1px solid var(--line);
+  background:var(--panel);padding:6px 12px;border-radius:999px}
+nav.jump a:hover{border-color:var(--accent);color:var(--accent)}
+section{padding:40px 0 8px}
+h2{font-size:22px;margin:0 0 6px;letter-spacing:-.01em}
+.sec-sub{color:var(--sub);margin:0 0 22px;font-size:15px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.card .no{font-size:13px;color:var(--sub);font-weight:600}
+.card h3{margin:0;font-size:20px;line-height:1.3}
+.card p{margin:0;font-size:14.5px;color:var(--sub)}
+.facts{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:14px}
+.facts li{display:flex;gap:8px}
+.facts li span:first-child{color:var(--sub);min-width:64px}
+.chip{display:inline-block;font-size:12.5px;padding:3px 9px;border-radius:999px;width:fit-content}
+.chip.ok{background:var(--ok-bg);color:var(--accent)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:4px}
+.btn{font-size:14px;text-decoration:none;padding:8px 14px;border-radius:8px;border:1px solid var(--line);color:var(--ink);background:transparent}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn:hover{border-color:var(--accent)}
+table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:14px}
+th,td{padding:11px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;color:var(--sub);font-weight:600;background:var(--bg)}
+tr:last-child td{border-bottom:0}
+.tbl{overflow-x:auto}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+.box h3{margin:0 0 8px;font-size:16px}
+.box ul{margin:0;padding-left:18px;font-size:14.5px;color:var(--sub)}
+.box li{margin:4px 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;background:var(--bg);padding:1px 5px;border-radius:4px}
+footer{margin-top:48px;padding:26px 0 48px;border-top:1px solid var(--line);font-size:13.5px;color:var(--sub)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="eyebrow">Vooy Benchmarks</div>
+    <h1>같은 다섯 과제,<br>한 페이지에서 보기</h1>
+    <p class="lead">Vooy가 원문 메타프롬프트 다섯 개를 직접 구현한 결과를 모았습니다. 열어 볼 수 있는 결과물, 구현 노트, 검증하지 못한 부분까지 함께 적었습니다.</p>
+    <div class="notice">
+      <b>읽기 전에.</b> 세부 모델명과 effort는 지정받지 않아 적지 않았습니다. 공식 성능 순위나 통제 실험 점수가 아니며, 측정하지 않은 수치(fps 등)는 쓰지 않았습니다. 아래 "열림 확인"은 페이지가 열리는 것까지만 확인했다는 뜻입니다.
+    </div>
+    <nav class="jump" aria-label="바로가기">
+      <a href="#tasks">다섯 과제</a>
+      <a href="#status">검증 현황</a>
+      <a href="#method">진행 방식</a>
+      <a href="#limits">한계</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="tasks">
+    <h2>다섯 과제</h2>
+    <p class="sec-sub">카드의 버튼으로 결과물을 바로 열 수 있습니다.</p>
+    <div class="grid">
+
+      <article class="card">
+        <div class="no">과제 1</div>
+        <h3>근정전 브릭 모션 그래픽</h3>
+        <p>경복궁 근정전을 브릭 모델로 쌓고, 32초 타임라인 안에서 분해·결합 보강·인벤토리를 보여 주는 단일 HTML 모션 그래픽입니다.</p>
+        <ul class="facts">
+          <li><span>규모</span><span>브릭 3,622개 (별도 스크립트로 집계)</span></li>
+          <li><span>조작</span><span>0–32초 시간 슬라이더</span></li>
+          <li><span>기술</span><span>three.js 0.170.0</span></li>
+        </ul>
+        <span class="chip warn">열림 확인 · 동작·fps 미검증</span>
+        <div class="actions">
+          <a class="btn primary" href="palace.html">열어 보기</a>
+          <a class="btn" href="https://github.com/sigco3111/vooy-benchmarks/blob/main/palace-NOTES.md">구현 노트</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="no">과제 2</div>
+        <h3>한강시 3인칭 오픈월드</h3>
+        <p>가상 도시 '한강시'를 걷고 운전하는 3인칭 게임. 미션 3개와 수배 1~3단계, 낮에서 밤으로 이어지는 시간 순환이 들어 있습니다.</p>
+        <ul class="facts">
+          <li><span>구성</span><span>다리 2개 · 고가도로 · 한글 네온 간판 8종</span></li>
+          <li><span>미션</span><span>배달 · 추격 따돌리기 · 옥상 레이스</span></li>
+          <li><span>조작</span><span>WASD · Shift · Space · F(탑승/하차)</span></li>
+        </ul>
+        <span class="chip warn">열림 확인 · 정적 검토만 · fps 미검증</span>
+        <div class="actions">
+          <a class="btn primary" href="hangang-city.html">열어 보기</a>
+          <a class="btn" href="https://github.com/sigco3111/vooy-benchmarks/blob/main/hangang-city-NOTES.md">구현 노트</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="no">과제 3</div>
+        <h3>모델 소개 스크롤 랜딩</h3>
+        <p>스크롤에 따라 하나의 입자 구름이 여섯 장면으로 모양을 바꾸는 소개 페이지입니다. 모델명 자리는 원문 그대로 <code>{{MODEL_NAME}}</code> 입니다.</p>
+        <ul class="facts">
+          <li><span>장면</span><span>여섯 장면 · 밝은/어두운 테마 전환</span></li>
+          <li><span>입자</span><span>데스크톱 8,000 / 모바일 3,800</span></li>
+          <li><span>기술</span><span>three.js · GSAP + ScrollTrigger</span></li>
+        </ul>
+        <span class="chip warn">열림 확인 · 동작·fps 미검증</span>
+        <div class="actions">
+          <a class="btn primary" href="model-intro.html">열어 보기</a>
+          <a class="btn" href="https://github.com/sigco3111/vooy-benchmarks/blob/main/model-intro-NOTES.md">구현 노트</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="no">과제 4</div>
+        <h3>단편 소설 「역상(逆像)」</h3>
+        <p>2031년 서울, 폐업을 앞둔 을지로 인쇄소의 활판 인쇄공 문 씨에게 매일 밤 한 문장씩 원고가 도착하는 이야기. 다섯 장면입니다.</p>
+        <ul class="facts">
+          <li><span>분량</span><span>본문 11,954자 (공백 포함), 약 59.8매</span></li>
+          <li><span>구성</span><span>다섯 장면 · 늦가을에서 첫눈까지</span></li>
+        </ul>
+        <span class="chip ok">글자 수 집계함 · 문장 품질은 자체 판단</span>
+        <div class="actions">
+          <a class="btn primary" href="https://github.com/sigco3111/vooy-benchmarks/blob/main/novel.md">소설 읽기</a>
+          <a class="btn" href="https://github.com/sigco3111/vooy-benchmarks/blob/main/novel-NOTES.md">글자 수·점검표</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="no">과제 5</div>
+        <h3>USB OBS 촬영 데스크 컨트롤러</h3>
+        <p>촬영 데스크용 USB 컨트롤러의 설계 일체. 요구사항, 구조, 부품 목록, 배선, 전원 예산, 펌웨어와 호스트 브리지 소스, 케이스 원본, 시뮬레이션 미리보기를 담았습니다.</p>
+        <ul class="facts">
+          <li><span>보드</span><span>Raspberry Pi Pico 2 + OLED</span></li>
+          <li><span>소스</span><span>펌웨어(C) · 호스트 브리지(Python) · 케이스(OpenSCAD)</span></li>
+          <li><span>제작</span><span>실물 제작·시험 안 함</span></li>
+        </ul>
+        <span class="chip warn">미리보기 열림 확인 · 컴파일·STL·실물 미검증</span>
+        <div class="actions">
+          <a class="btn primary" href="hardware/preview/index.html">미리보기</a>
+          <a class="btn" href="https://github.com/sigco3111/vooy-benchmarks/tree/main/hardware">설계 문서·소스</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="no">원문</div>
+        <h3>메타프롬프트 원문</h3>
+        <p>다섯 과제의 원문을 자리표시자(<code>{{MODEL_NAME}}</code>, <code>{{EFFORT}}</code>, <code>{{TASK_DIR}}</code>)까지 그대로 보존했습니다.</p>
+        <ul class="facts">
+          <li><span>출처</span><span>코드팩토리 메타프롬프트 (사용자 제공)</span></li>
+        </ul>
+        <div class="actions">
+          <a class="btn primary" href="https://github.com/sigco3111/vooy-benchmarks/blob/main/ORIGINAL_PROMPTS.txt">원문 보기</a>
+          <a class="btn" href="https://github.com/sigco3111/vooy-benchmarks">저장소</a>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section id="status">
+    <h2>검증 현황</h2>
+    <p class="sec-sub">확인한 것과 확인하지 못한 것을 나란히 둡니다.</p>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>과제</th><th>결과물</th><th>확인한 것</th><th>확인하지 못한 것</th></tr></thead>
+        <tbody>
+          <tr><td>1 근정전</td><td><code>palace.html</code></td><td>코드 작성, 페이지 열림, 브릭 수 집계(별도 실행)</td><td>화면 동작, 콘솔 오류, fps, 1920×1080 캡처</td></tr>
+          <tr><td>2 한강시</td><td><code>hangang-city.html</code></td><td>코드 정적 검토(괄호·선언 순서), 페이지 열림</td><td>실제 조작, 미션 진행, 콘솔 오류, fps</td></tr>
+          <tr><td>3 소개 페이지</td><td><code>model-intro.html</code></td><td>자리표시자 표기, 외부 참조 3곳, 페이지 열림</td><td>입자 모핑, 장면 전환, 모바일 배치, fps</td></tr>
+          <tr><td>4 소설</td><td><code>novel.md</code></td><td>글자 수와 원고지 환산, 요구 항목 점검표</td><td>외부 검수</td></tr>
+          <tr><td>5 하드웨어</td><td><code>hardware/</code></td><td>문서·소스 작성, 미리보기 페이지 열림</td><td>펌웨어 컴파일, 호스트 시험 실행, STL 생성, 실물 제작</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="method">
+    <h2>진행 방식</h2>
+    <p class="sec-sub">같은 조건으로 만든 기록이라는 점이 핵심입니다.</p>
+    <div class="cols">
+      <div class="box"><h3>실행 주체</h3>
+        <ul><li>Vooy (모델명·effort 미지정)</li><li>파일 읽기·쓰기만 되는 작업 환경에서 작성</li></ul></div>
+      <div class="box"><h3>과제 출처</h3>
+        <ul><li>원문 메타프롬프트 다섯 개</li><li>자리표시자는 바꾸지 않음</li></ul></div>
+      <div class="box"><h3>반영 방식</h3>
+        <ul><li>결과 파일을 GitHub에 커밋</li><li>파일 크기(바이트) 일치까지 대조</li><li>GitHub Pages로 배포</li></ul></div>
+    </div>
+  </section>
+
+  <section id="limits">
+    <h2>한계</h2>
+    <p class="sec-sub">이 페이지를 볼 때 알아 둘 점입니다.</p>
+    <div class="box">
+      <ul>
+        <li>브라우저 실행, 컴파일, 3D 출력은 작업 환경에서 하지 못했습니다. 그래서 과제 1~3과 5의 실행 검증은 비어 있습니다.</li>
+        <li>수치는 측정한 것만 적었습니다. fps와 성능 점수는 없습니다.</li>
+        <li>모델 비교용 순위표가 아니라 한 번의 수행 기록입니다.</li>
+        <li>스크린샷은 아직 없습니다. 실행 가능한 환경에서 확인한 뒤 추가할 예정입니다.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    Vooy Benchmarks · <a href="https://github.com/sigco3111/vooy-benchmarks">github.com/sigco3111/vooy-benchmarks</a><br>
+    과제 원문 출처: 코드팩토리 메타프롬프트(사용자 제공). 외부 이미지·폰트 없이 만든 한 장의 정적 페이지입니다.
+  </div>
+</footer>
+</body>
+</html>
