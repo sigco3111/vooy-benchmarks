@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>USB OBS 촬영 컨트롤러 - 미리보기 (시뮬레이션)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* Fixed 1920x1080 stage; scaled to fit the window. Open the file directly in a browser. */
+  html, body { margin:0; height:100%; background:#14161a; overflow:hidden; font-family: "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif; color:#e8e8e8; }
+  #stage { position:absolute; left:0; top:0; width:1920px; height:1080px; transform-origin:0 0; }
+  .panel { position:absolute; background:#1d2027; border:1px solid #2c313b; border-radius:10px; padding:18px 22px; box-sizing:border-box; }
+  h1 { position:absolute; left:40px; top:22px; margin:0; font-size:30px; font-weight:700; }
+  .tag { position:absolute; right:40px; top:30px; font-size:16px; color:#ffb199; border:1px solid #ffb199; padding:6px 12px; border-radius:6px; }
+  .ptitle { font-size:18px; font-weight:700; margin:0 0 10px; color:#cfd6e4; }
+  .note { font-size:14px; color:#9aa3b2; line-height:1.5; }
+  .accent { color:#E8612C; }
+  /* Assembly */
+  #assembly { left:40px; top:90px; width:900px; height:700px; }
+  #asm { width:100%; height:600px; }
+  /* Device */
+  #device { left:960px; top:90px; width:520px; height:700px; }
+  /* Timeline */
+  #timeline { left:40px; top:810px; width:1840px; height:230px; }
+  /* Log */
+  #log { left:1500px; top:90px; width:380px; height:700px; overflow:hidden; }
+  .oled { width:300px; height:150px; background:#000; border:6px solid #2a2f38; border-radius:8px; margin:6px auto 16px; position:relative; overflow:hidden; }
+  .oled .line { position:absolute; left:12px; font-family: Consolas, "Courier New", monospace; color:#7dffb0; white-space:pre; }
+  .btnrow { display:flex; gap:14px; justify-content:center; margin:10px 0; }
+  button.key { background:#2b303b; color:#eee; border:1px solid #444c5c; border-radius:8px; padding:12px 16px; font-size:16px; cursor:pointer; min-width:150px; }
+  button.key:hover { border-color:#E8612C; }
+  button.key:active { background:#3a4150; }
+  .led { width:26px; height:26px; border-radius:50%; background:#3a0d0d; margin:0 auto; box-shadow:none; }
+  .led.on { background:#ff2a2a; box-shadow:0 0 18px 6px rgba(255,42,42,.7); }
+  .kv { font-size:15px; line-height:1.9; }
+  .kv b { color:#fff; display:inline-block; width:132px; }
+  .ok { color:#7dffb0; } .warn { color:#ffc04d; } .bad { color:#ff7a7a; }
+  input[type=range] { width:100%; accent-color:#E8612C; }
+  .row { display:flex; align-items:center; gap:14px; }
+  .time { font-family: Consolas, monospace; font-size:26px; color:#fff; min-width:140px; }
+  #events { height:150px; overflow:hidden; font-family: Consolas, monospace; font-size:14px; line-height:1.55; color:#b9c2d0; }
+  #events div.cur { color:#E8612C; }
+  .slider-label { font-size:14px; color:#9aa3b2; margin-top:6px; }
+  #logtext { font-family: Consolas, monospace; font-size:14px; line-height:1.55; color:#b9c2d0; height:600px; overflow:hidden; white-space:pre-wrap; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <h1>USB OBS 촬영 컨트롤러 <span class="accent">·</span> 케이스 · 화면 · 상태 미리보기</h1>
+  <div class="tag">시뮬레이션: 실제 OBS, 실제 기기 아님</div>
+
+  <!-- ===== Assembly / exploded view ===== -->
+  <div class="panel" id="assembly">
+    <p class="ptitle">케이스 조립 / 분해 (설계 치수 기준, 80 × 56 × 17.5 mm 외형)</p>
+    <svg id="asm" viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="row">
+      <span class="note" style="min-width:90px">분해 정도</span>
+      <input type="range" id="explode" min="0" max="100" value="0">
+      <span id="explodeVal" class="note" style="min-width:60px;text-align:right">0 %</span>
+    </div>
+    <p class="note">0 % = 조립 상태, 100 % = 분해. 상판·트레이·PCB 위치만 바뀌며 치수는 DIMENSIONS.md 값이다. 색은 구분용.</p>
+  </div>
+
+  <!-- ===== Device front (OLED, buttons, LED) ===== -->
+  <div class="panel" id="device">
+    <p class="ptitle">상판 화면 · 버튼 · 표시등 (시뮬레이션)</p>
+    <div class="oled" id="oled"></div>
+    <div class="btnrow">
+      <button class="key" id="btnRec">REC 버튼</button>
+      <button class="key" id="btnScene">SCENE 버튼</button>
+    </div>
+    <div class="led" id="led" title="빨간 표시등"></div>
+    <p class="note" style="text-align:center;margin:6px 0 14px">표시등: <span id="ledText">꺼짐</span></p>
+    <div class="kv">
+      <div><b>펌웨어 상태 문구</b><span id="kStatus"></span></div>
+      <div><b>호스트 링크</b><span id="kLink"></span></div>
+      <div><b>OBS 응답</b><span id="kObs"></span></div>
+      <div><b>녹화 상태(rec)</b><span id="kRec"></span></div>
+      <div><b>현재 장면</b><span id="kScene"></span></div>
+      <div><b>경과 시간</b><span id="kTime"></span></div>
+    </div>
+    <p class="note">버튼은 상태를 직접 바꾸지 않는다. 호스트가 OBS 상태를 보고할 때까지 PEND로 표시한다(펌웨어 설계).</p>
+  </div>
+
+  <!-- ===== Timeline ===== -->
+  <div class="panel" id="timeline">
+    <p class="ptitle">시간 슬라이더 (0–30 s, 시나리오 재생)</p>
+    <div class="row">
+      <button class="key" id="playBtn" style="min-width:110px">재생</button>
+      <input type="range" id="t" min="0" max="30" step="0.1" value="0">
+      <span class="time" id="tVal">00.0 s</span>
+    </div>
+    <p class="slider-label">시나리오: 부팅 → 호스트 연결 → REC 시작 → 장면 전환 → REC 정지 → 호스트 연결 끊김(3 s 뒤 NO LINK) → 재연결. 버튼을 누르면 현재 슬라이더 시각에 이벤트가 추가된다.</p>
+    <div id="events"></div>
+  </div>
+
+  <!-- ===== Log ===== -->
+  <div class="panel" id="log">
+    <p class="ptitle">설계 근거 요약</p>
+    <div id="logtext"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ================= Scenario events (seconds) =================
+     type: link (host connected/disconnected), btn (REC|SCENE), rec (OBS state code), scene (name) */
+  var BASE_EVENTS = [
+    { t: 1.5,  type: "link", up: true },
+    { t: 3.0,  type: "btn",  id: "REC" },
+    { t: 3.6,  type: "rec",  v: 1 },          // STARTING (OBS RecordStateChanged)
+    { t: 4.0,  type: "rec",  v: 2 },          // RECORDING
+    { t: 12.0, type: "btn",  id: "SCENE" },
+    { t: 12.4, type: "scene", v: "Desk Close" },
+    { t: 15.0, type: "btn",  id: "REC" },
+    { t: 15.5, type: "rec",  v: 3 },          // STOPPING
+    { t: 16.0, type: "rec",  v: 0 },          // STOPPED
+    { t: 18.0, type: "link", up: false },
+    { t: 24.0, type: "link", up: true }
+  ];
+  var userEvents = [];
+  var REC_NAMES = ["STOPPED", "STARTING", "RECORDING", "STOPPING", "PAUSED"];
+  var LINK_TIMEOUT = 3.0, PEND_TIMEOUT = 3.0, FLASH = 1.5;
+
+  function allEvents() {
+    return BASE_EVENTS.concat(userEvents).sort(function (a, b) { return a.t - b.t; });
+  }
+
+  /* Replays the events up to time T with the same rules as firmware/src/main.c and host/obs_bridge.py. */
+  function simulate(T) {
+    var s = {
+      connected: false, lastST: -99, obsOk: true, rec: 0, recStart: null,
+      scene: "Main", pend: null, timedOutUntil: -1, flashText: null, flashUntil: -1
+    };
+    var evs = allEvents();
+    var lastLinkTime = -99;
+    evs.forEach(function (e) {
+      if (e.t > T) return;
+      if (e.type === "link") {
+        s.connected = e.up;
+        if (e.up) s.lastST = e.t;
+      } else if (e.type === "btn") {
+        var linkOk = s.connected && (e.t - s.lastST) < LINK_TIMEOUT;
+        if (!linkOk) { s.flashText = "NO LINK"; s.flashUntil = e.t + FLASH; return; }
+        if (!s.obsOk) { s.flashText = "NO OBS"; s.flashUntil = e.t + FLASH; return; }
+        if (s.pend) return;                         // one command in flight
+        s.pend = { id: e.id, since: e.t, recBefore: s.rec, sceneBefore: s.scene };
+      } else if (e.type === "rec") {
+        var prev = s.rec;
+        s.rec = e.v;
+        if (e.v === 2 && prev !== 2) s.recStart = e.t;
+        if (e.v !== 2) s.recStart = null;
+        if (s.pend && s.pend.id === "REC" && s.rec !== s.pend.recBefore) s.pend = null;
+      } else if (e.type === "scene") {
+        s.scene = e.v;
+        if (s.pend && s.pend.id === "SCENE" && s.scene !== s.pend.sceneBefore) s.pend = null;
+      }
+      // heartbeat: host sends ST every 1 s while connected; device keeps lastST fresh
+      if (s.connected) s.lastST = Math.max(s.lastST, Math.floor(e.t));
+    });
+    // time since last heartbeat (simple model: ST every 1 s while connected)
+    var connectedNow = s.connected;
+    var lastSeen = s.lastST;
+    if (connectedNow) lastSeen = Math.max(lastSeen, Math.floor(T));
+    s.linkOk = connectedNow && (T - lastSeen) < LINK_TIMEOUT;
+    // pending timeout
+    if (s.pend && (T - s.pend.since) >= PEND_TIMEOUT) {
+      s.timedOutUntil = s.pend.since + PEND_TIMEOUT + FLASH;
+      s.pend = null;
+    }
+    s.elapsed = (s.rec === 2 && s.recStart !== null) ? Math.floor(T - s.recStart) : 0;
+    return s;
+  }
+
+  function statusWord(s, T) {
+    if (s.flashText && T < s.flashUntil) return s.flashText;
+    if (!s.linkOk) return "NO LINK";
+    if (!s.obsOk) return "NO OBS";
+    if (s.pend && s.pend.id === "REC") return "PEND REC";
+    if (s.pend && s.pend.id === "SCENE") return "PEND SCENE";
+    if (T < s.timedOutUntil) return "TIMEOUT";
+    switch (s.rec) {
+      case 0: return "IDLE";
+      case 1: return "STARTING";
+      case 2: return "REC";
+      case 3: return "STOPPING";
+      case 4: return "PAUSED";
+    }
+    return "?";
+  }
+
+  function ledOn(s, T) {
+    var half;
+    if (!s.linkOk) half = 0.5;
+    else if (s.pend) half = 0.1;
+    else if (s.rec === 2) return true;
+    else if (s.rec === 1 || s.rec === 3) half = 0.1;
+    else if (s.rec === 4) half = 0.5;
+    else return false;
+    return (Math.floor(T / half) % 2) === 0;
+  }
+
+  function fmt(t) {
+    var h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, sec = t % 60;
+    return [h, m, sec].map(function (x) { return String(x).padStart(2, "0"); }).join(":");
+  }
+
+  /* ================= OLED / status rendering ================= */
+  var oled = document.getElementById("oled");
+  function renderOled(s, T) {
+    var link = s.linkOk, obsOk = link && s.obsOk;
+    var clock = fmt(link ? s.elapsed : 0);
+    oled.innerHTML =
+      '<div class="line" style="top:10px;font-size:20px">' + statusWord(s, T) + '</div>' +
+      '<div class="line" style="top:44px;font-size:36px;letter-spacing:1px">' + clock + '</div>' +
+      '<div class="line" style="top:100px;font-size:16px">SCENE ' + (obsOk ? s.scene : "--") + '</div>' +
+      '<div class="line" style="top:124px;font-size:13px">LINK ' + (link ? "OK" : "--") + '   OBS ' + (obsOk ? "OK" : "--") + '</div>';
+  }
+
+  /* ================= Assembly SVG ================= */
+  var NS = "http://www.w3.org/2000/svg";
+  var asm = document.getElementById("asm");
+  function el(tag, attrs, parent) {
+    var n = document.createElementNS(NS, tag);
+    Object.keys(attrs).forEach(function (k) { n.setAttribute(k, attrs[k]); });
+    (parent || asm).appendChild(n);
+    return n;
+  }
+  var gTray, gLid, gPico, gOled, gKp;
+  function buildAsm() {
+    // Iso-like oblique projection: x right, y down-right, z up.
+    // Scale: 1 mm = 3.6 px. Origin placed so the case fits.
+    var S = 3.6, OX = 380, OY = 430;
+    function P(x, y, z) { // mm -> px (oblique)
+      return [OX + (x * S) + (y * S * 0.45), OY - (z * S) - (y * S * 0.28)];
+    }
+    function box(parent, x, y, z, w, d, h, fill, stroke) {
+      // draw the visible faces: top, front (y=0), right (x=w)
+      var a = P(x, y, z), b = P(x + w, y, z), c = P(x + w, y + d, z), dd = P(x, y + d, z);
+      var e = P(x, y, z + h), f = P(x + w, y, z + h), g = P(x + w, y + d, z + h), hh = P(x, y + d, z + h);
+      var pts = function (arr) { return arr.map(function (p) { return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join(" "); };
+      var grp = el("g", {}, parent);
+      el("polygon", { points: pts([a, b, f, e]), fill: fill, stroke: stroke, "stroke-width": 1, "fill-opacity": 0.92 }, grp);
+      el("polygon", { points: pts([b, c, g, f]), fill: fill, stroke: stroke, "stroke-width": 1, "fill-opacity": 0.75 }, grp);
+      el("polygon", { points: pts([e, f, g, hh]), fill: fill, stroke: stroke, "stroke-width": 1, "fill-opacity": 1 }, grp);
+      return grp;
+    }
+    function plate(parent, x, y, z, w, d, fill, label) {
+      var a = P(x, y, z), b = P(x + w, y, z), c = P(x + w, y + d, z), dd = P(x, y + d, z);
+      var pts = [a, b, c, dd].map(function (p) { return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join(" ");
+      el("polygon", { points: pts, fill: fill, stroke: "#0a0a0a", "stroke-width": 0.6 }, parent);
+      if (label) {
+        var t = el("text", { x: (a[0] + c[0]) / 2, y: (a[1] + c[1]) / 2, fill: "#fff", "font-size": 11, "text-anchor": "middle", "font-family": "Consolas, monospace" }, parent);
+        t.textContent = label;
+      }
+    }
+    // Outer tray and lid share the same footprint (80 x 56 mm outer, origin at 0,0 for the outer corner).
+    gTray = el("g", {}, asm);
+    box(gTray, 0, 0, 0, 80, 56, 17.5, "#2d3440", "#11151c");
+    // cavity hint
+    plate(gTray, 2, 2, 2.0, 76, 52, "#1b2029");
+
+    // Pico 2 (51 x 21, PCB at standoff 6 mm from outer floor: floor 2 + standoff 4)
+    gPico = el("g", {}, asm);
+    plate(gPico, 2.0, 0.5 + 2, 6.0, 21, 51, "#2e8b57", "Pico 2");
+    // Pico PCB is 1 mm thick; draw as thin slab
+    box(gPico, 2.0, 2.5, 6.0, 21, 51, 1.0, "#2e8b57", "#0b3d24");
+
+    // OLED (35.6 x 33 PCB, standoff 6.5 mm above floor level 2 -> z 8.5)
+    gOled = el("g", {}, asm);
+    box(gOled, 26.0 + 2, 9.5 + 2, 8.5, 35.6, 33, 6.2, "#1b3a6b", "#0b1f3d");
+    // active window (30 x 16) on top of lid is shown on lid below
+
+    // Keypad board 11 x 36 at standoff 9 -> z 11 (floor 2 + 9)
+    gKp = el("g", {}, asm);
+    box(gKp, 63.0 + 2, 8.0 + 2, 11.0, 11, 36, 1.6, "#5a5f68", "#222");
+
+    // Lid (sits above, exploded by slider)
+    gLid = el("g", {}, asm);
+    return { P: P, box: box, plate: plate };
+  }
+
+  var geo = buildAsm();
+  var explodeEl = document.getElementById("explode");
+  function renderExplode() {
+    var v = Number(explodeEl.value);
+    document.getElementById("explodeVal").textContent = v + " %";
+    var lift = v * 0.9; // mm of separation for the lid and tray, scaled for display
+    // Rebuild the assembly group with the lid lift applied
+    asm.innerHTML = "";
+    var S = 3.6, OX = 380, OY = 430;
+    var P = geo.P, box = geo.box, plate = geo.plate;
+    var gT = el("g", {}, asm);
+    box(gT, 0, 0, 0, 80, 56, 2, "#2d3440", "#11151c");              // floor
+    box(gT, 0, 0, 0, 2, 56, 15.5, "#2d3440", "#11151c");              // left wall (approx.)
+    box(gT, 78, 0, 0, 2, 56, 15.5, "#2d3440", "#11151c");             // right wall
+    box(gT, 0, 0, 0, 80, 2, 15.5, "#2d3440", "#11151c");              // front wall
+    box(gT, 0, 54, 0, 80, 2, 15.5, "#2d3440", "#11151c");             // back wall
+    var z0 = 0;
+    // Positions follow enclosure/case.scad (wall 2 mm; Pico PCB at x 4, y 2.5, z 6; OLED PCB at x 28, y 11.5, z 8.5;
+    // keypad PCB at x 65, y 10, z 3; lid plate at z 15.5). Display only.
+    var gP = el("g", {}, asm);
+    box(gP, 4.0, 2.5, 6.0, 21, 51, 1.0, "#2e8b57", "#0b3d24");
+    var gO = el("g", {}, asm);
+    box(gO, 28.0, 11.5, 8.5 + lift * 0.35, 35.6, 33, 6.2, "#1b3a6b", "#0b1f3d");
+    var gK = el("g", {}, asm);
+    box(gK, 65.0, 10.0, 3.0 + lift * 0.1, 11, 36, 1.6, "#5a5f68", "#222");
+    var gL = el("g", {}, asm);
+    box(gL, 0, 0, 15.5 + lift, 80, 56, 2, "#3b4250", "#11151c");     // lid plate
+    // OLED window 30 x 16 centred on the OLED PCB, drawn on the lid top face
+    plate(gL, 28.0 + 17.8 - 15, 11.5 + 16.5 - 8, 17.5 + lift + 0.05, 30, 16, "#0b0f16", "OLED 창 30x16");
+    // labels
+    var lbl = el("text", { x: 40, y: 560, fill: "#9aa3b2", "font-size": 13, "font-family": "sans-serif" }, asm);
+    lbl.textContent = "분해 " + v + "%: 상판 +" + (lift).toFixed(0) + " mm, PCB/스위치는 스탠드오프 위 고정 (배치 개략도)";
+  }
+  explodeEl.addEventListener("input", renderExplode);
+  renderExplode();
+
+  /* ================= Timeline control & render ================= */
+  var tSlider = document.getElementById("t");
+  var tVal = document.getElementById("tVal");
+  var playBtn = document.getElementById("playBtn");
+  var playing = false, playTimer = null;
+
+  function setT(v) {
+    tSlider.value = v;
+    render(Number(v));
+  }
+
+  function render(T) {
+    tVal.textContent = T.toFixed(1) + " s";
+    var s = simulate(T);
+    renderOled(s, T);
+    var on = ledOn(s, T);
+    document.getElementById("led").className = "led" + (on ? " on" : "");
+    document.getElementById("ledText").textContent = on ? "켜짐 (빨강)" : "꺼짐";
+    var st = statusWord(s, T);
+    document.getElementById("kStatus").innerHTML = " <span class='" + (st === "REC" ? "bad" : "ok") + "'>" + st + "</span>";
+    document.getElementById("kLink").innerHTML = " " + (s.linkOk ? "<span class='ok'>OK</span>" : "<span class='bad'>NO LINK (3 s 무응답)</span>");
+    document.getElementById("kObs").innerHTML = " " + (s.linkOk && s.obsOk ? "<span class='ok'>OK</span>" : "<span class='warn'>확인 불가</span>");
+    document.getElementById("kRec").textContent = " " + REC_NAMES[s.rec] + " (" + s.rec + ")" + (s.pend ? "  · 명령 대기: " + s.pend.id : "");
+    document.getElementById("kScene").textContent = " " + (s.linkOk ? s.scene : "--");
+    document.getElementById("kTime").textContent = " " + fmt(s.linkOk ? s.elapsed : 0);
+    renderEvents(T);
+  }
+
+  function renderEvents(T) {
+    var list = allEvents();
+    var html = list.map(function (e) {
+      var label;
+      if (e.type === "link") label = e.up ? "호스트 연결(ST 시작)" : "호스트 끊김";
+      else if (e.type === "btn") label = "버튼 " + e.id + " 누름 → BTN " + e.id + " 전송";
+      else if (e.type === "rec") label = "OBS 녹화 상태 = " + REC_NAMES[e.v];
+      else if (e.type === "scene") label = "OBS 장면 = " + e.v;
+      var mark = e.t <= T && e.t > T - 0.6 ? " ◀" : "";
+      return '<div class="' + (e.t <= T ? "" : "") + '">' + e.t.toFixed(1) + " s  " + label + mark + '</div>';
+    }).join("");
+    document.getElementById("events").innerHTML = html;
+  }
+
+  tSlider.addEventListener("input", function () { render(Number(tSlider.value)); });
+
+  playBtn.addEventListener("click", function () {
+    playing = !playing;
+    playBtn.textContent = playing ? "정지" : "재생";
+    if (playing) {
+      playTimer = setInterval(function () {
+        var v = Number(tSlider.value) + 0.1;
+        if (v > 30) { v = 0; }
+        setT(v.toFixed(1));
+      }, 100);
+    } else {
+      clearInterval(playTimer);
+    }
+  });
+
+  function pressUser(id) {
+    var T = Number(tSlider.value);
+    userEvents.push({ t: T, type: "btn", id: id });
+    render(T);
+  }
+  document.getElementById("btnRec").addEventListener("click", function () { pressUser("REC"); });
+  document.getElementById("btnScene").addEventListener("click", function () { pressUser("SCENE"); });
+
+  /* ================= Design summary (static) ================= */
+  document.getElementById("logtext").textContent =
+    "보드: Raspberry Pi Pico 2 (RP2350)\n" +
+    "화면: Adafruit 938 OLED 128x64 (SSD1306, I2C 0x3C)\n" +
+    "입력: REC(GP14), SCENE(GP13) 활성 LOW\n" +
+    "출력: LED(GP15) 330 Ω, 3.9 mA\n" +
+    "I2C: GP4 SDA, GP5 SCL, 4.7 kΩ 풀업\n" +
+    "통신: USB CDC 줄 단위 (BTN, HELLO, ST)\n" +
+    "OBS: obs-websocket v5, 4455\n\n" +
+    "케이스 외형: 80 x 56 x 17.5 mm\n" +
+    "[A] 벽 2 mm, 스탠드오프 4/6.5/9 mm\n" +
+    "[S] Pico 2 홀 11.4 x 47 mm, Ø2.1\n" +
+    "[S] OLED 홀 30.5 x 28 mm, Ø2.5\n\n" +
+    "전원: USB 5 V, 추정 95 mA 최악\n" +
+    "(목표 상한 200 mA, 실측 미검증)\n\n" +
+    "시뮬레이션 범위: 펌웨어 상태 로직과 시간 흐름만.\n" +
+    "실제 OBS, USB, LED 밝기, 키 반응 시간은 재현하지 않음.";
+
+  /* ================= Fit the 1920x1080 stage to the window ================= */
+  var stage = document.getElementById("stage");
+  function fit() {
+    var sc = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    stage.style.transform = "scale(" + sc + ")";
+    stage.style.left = ((window.innerWidth - 1920 * sc) / 2) + "px";
+    stage.style.top = ((window.innerHeight - 1080 * sc) / 2) + "px";
+  }
+  window.addEventListener("resize", fit);
+  fit();
+
+  // Expose for capture scripts: window.setTime(sec) jumps to a frame.
+  window.setTime = setT;
+  render(0);
+})();
+</script>
+</body>
+</html>
