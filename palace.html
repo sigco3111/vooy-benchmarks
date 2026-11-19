@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>경복궁 근정전 브릭 모션 · palace.html</title>
+<style>
+html,body{margin:0;height:100%;background:#1b1a18;overflow:hidden}
+#wrap{position:fixed;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:#F2EEE6;overflow:hidden;color:#2A2622;font-family:ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace}
+#cv{position:absolute;left:0;top:0;width:1920px;height:1080px;display:block}
+#ui{position:absolute;left:0;top:0;width:1920px;height:1080px;pointer-events:none}
+.p{position:absolute;font-variant-numeric:tabular-nums;white-space:nowrap}
+#dims{left:60px;top:60px;font-size:36px;line-height:1.55;font-weight:700}
+#dims span{display:inline-block;width:70px;color:#E8612C}
+#dims b{font-size:44px}
+#callRoof{left:1360px;top:200px;font-size:44px;font-weight:700;background:#2A2622;color:#F2EEE6;padding:6px 18px}
+#warn{right:70px;top:60px;font-size:64px;font-weight:700}
+#warn i{font-style:normal;color:#E8612C}
+#lead{position:absolute;left:0;top:0;width:1920px;height:1080px}
+#inv{left:0;top:280px;width:1920px;height:520px;display:flex;justify-content:center;align-items:center;gap:26px}
+.card{width:300px;height:300px;border:2px solid #2A2622;background:rgba(242,238,230,.95);display:flex;flex-direction:column;justify-content:space-between;padding:22px;box-sizing:border-box}
+.card .ic{font-size:60px;line-height:1}
+.card .sw{width:100%;height:14px}
+.card .nm{font-size:30px;font-weight:700}
+.card .n{font-size:72px;font-weight:700;line-height:1}
+#stats{left:60px;top:880px;width:1800px;height:150px;display:grid;grid-template-columns:repeat(6,1fr)}
+#stats div{border-left:2px solid #2A2622;padding:14px 18px;box-sizing:border-box}
+#stats .k{font-size:22px;color:#6b655c}
+#stats .v{font-size:58px;font-weight:700;line-height:1.1}
+#bar{position:fixed;left:0;right:0;bottom:0;height:44px;display:flex;align-items:center;gap:14px;padding:0 16px;box-sizing:border-box;background:#1b1a18;color:#F2EEE6;font:15px ui-monospace,Menlo,monospace}
+#bar input{flex:1}
+#bar button{background:#E8612C;color:#1b1a18;border:0;padding:4px 14px;font:700 15px ui-monospace,monospace;cursor:pointer}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}</script>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv" width="1920" height="1080"></canvas>
+  <div id="ui">
+    <div class="p" id="dims">
+      <div><span>↔</span><b id="dW">0</b></div>
+      <div><span>↕</span><b id="dH">0</b></div>
+      <div><span>⤢</span><b id="dD">0</b></div>
+    </div>
+    <svg id="lead" viewBox="0 0 1920 1080"><line id="ld" x1="0" y1="0" x2="0" y2="0" stroke="#E8612C" stroke-width="3" opacity="0"/><circle id="ldc" r="7" fill="#E8612C" cx="0" cy="0" opacity="0"/></svg>
+    <div class="p" id="callRoof" style="opacity:0">▲ <b id="rN">0</b></div>
+    <div class="p" id="warn" style="opacity:0"><i>⚠</i> <b id="wN">0</b></div>
+    <div class="p" id="inv" style="opacity:0"></div>
+    <div class="p" id="stats" style="opacity:0">
+      <div><div class="k">▦ 브릭</div><div class="v" id="s0">0</div></div>
+      <div><div class="k">≡ 단계</div><div class="v" id="s1">0</div></div>
+      <div><div class="k">◫ 파트</div><div class="v" id="s2">0</div></div>
+      <div><div class="k">⏱ ms</div><div class="v" id="s3">0</div></div>
+      <div><div class="k">✕ 에러</div><div class="v" id="s4">0</div></div>
+      <div><div class="k">⚠ 경고</div><div class="v" id="s5">0</div></div>
+    </div>
+  </div>
+</div>
+<div id="bar">
+  <button id="play">▶</button>
+  <input id="rng" type="range" min="0" max="32000" step="10" value="0">
+  <span id="tc">00.00 / 32.00 s</span>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* ---------- constants ---------- */
+const W = 1920, HH = 1080;
+const CM = 75;            // 축척 가정: 1 모델 유닛 = 75cm (실측 아님, NOTES 참고)
+const C = {
+  stone: 0xCFC8BA, rail: 0xDDD5C4, red: 0xB8322A, yellow: 0xD9A441,
+  teal: 0x2F6F6A, roofBody: 0x5E5A52, yard: 0x8D8A82,
+  blue: 0x2F6FD6, ink: 0x2A2622, orange: 0xE8612C, ground: 0xF2EEE6, mount: 0xD6CFBF
+};
+const PARTS = ['월대', '기둥', '공포', '지붕', '마당'];
+const ICON = { 월대: '▤', 기둥: '▮', 공포: '⋈', 지붕: '⌂', 마당: '◎' };
+const PCOLOR = { 월대: C.stone, 기둥: C.red, 공포: C.yellow, 지붕: C.teal, 마당: C.yard };
+const TIMELINE = [
+  { from: 0, to: 7, name: '분해·계측' }, { from: 7, to: 13, name: '와이어프레임·결합부' },
+  { from: 13, to: 17, name: '모노톤·지붕' }, { from: 17, to: 23, name: '기둥 보강' },
+  { from: 23, to: 29, name: '인벤토리' }, { from: 29, to: 32, name: '통계' }
+];
+const JOINTS = [4, 5, 6, 7, 8, 9];   // 기둥(10,10) 의 내부 결합부 높이
+const DIR = new THREE.Vector3(100, 90, 100);
+const CENTER = new THREE.Vector3(0, 11, 6);
+const COLT = new THREE.Vector3(10.5, 7, 10.5);
+
+const clamp01 = x => Math.min(1, Math.max(0, x));
+const smooth = (a, b, t) => { const x = clamp01((t - a) / (b - a)); return x * x * (3 - 2 * x); };
+const fmt = n => Math.round(n).toLocaleString('en-US');
+
+/* ---------- build (코드가 브릭을 하나씩 배치하고 센다) ---------- */
+const T_BUILD = performance.now();
+const bricks = [];
+const occ = new Set();
+const stat = { phases: 0, errors: 0 };
+
+function add(part, lvl, color, x, y, z, w, h, d, tag) {
+  const key = x + ',' + y + ',' + z;
+  if (occ.has(key)) return;               // 같은 칸 중복 배치 방지
+  occ.add(key);
+  bricks.push({ part, lvl, col: new THREE.Color(color), x, y, z, w, h, d, tag: tag || '', pi: PARTS.indexOf(part) });
+}
+function fill(part, lvl, color, x0, x1, y0, y1, z0, z1, cw, ch, cd, f, tag) {
+  for (let y = y0; y < y1; y += ch) for (let x = x0; x < x1; x += cw) for (let z = z0; z < z1; z += cd) {
+    if (f && !f(x, y, z)) continue;
+    add(part, lvl, color, x, y, z, cw, ch, cd, tag);
+  }
+}
+function ring(part, lvl, y, hx, hz, th, color) {
+  for (let x = -hx; x < hx; x++) for (let z = -hz; z < hz; z++) {
+    const cx = x + 0.5, cz = z + 0.5;
+    if (Math.abs(cx) < hx - th && Math.abs(cz) < hz - th) continue;
+    const up = (Math.abs(cx) > hx - 4 && Math.abs(cz) > hz - 4) ? 1 : 0;   // 추녀 솟음
+    add(part, lvl, color, x, y + up, z, 1, 1, 1, '');
+  }
+}
+function phase(fn) { try { fn(); stat.phases++; } catch (e) { stat.errors++; console.error(e); } }
+
+// 1) 2단 월대
+phase(() => {
+  fill('월대', 0, C.stone, -20, 20, 0, 2, -16, 16, 2, 1, 2);
+  fill('월대', 1, C.stone, -15, 15, 2, 4, -12, 12, 2, 1, 2);
+});
+// 2) 돌난간 · 정면 계단
+phase(() => {
+  fill('월대', 0, C.rail, -20, 20, 2, 3, -16, 16, 1, 1, 1,
+    (x, y, z) => (x === -20 || x === 19 || z === -16 || z === 15) && !(z === 15 && x >= -3 && x < 3));
+  fill('월대', 0, C.stone, -3, 3, 0, 1, 16, 18, 1, 1, 1);
+  fill('월대', 0, C.stone, -3, 3, 1, 2, 17, 18, 1, 1, 1);
+});
+// 3) 기둥: 정면 5칸 · 측면 5칸 (기둥 6열 x 6행의 외곽)
+const XS = [-10, -6, -2, 2, 6, 10];
+phase(() => {
+  for (const x of XS) for (const z of XS) {
+    if (!(Math.abs(x) === 10 || Math.abs(z) === 10)) continue;
+    for (let y = 4; y < 10; y++) add('기둥', 2, C.red, x, y, z, 1, 1, 1, (x === 10 && z === 10) ? 'target' : '');
+  }
+});
+// 4) 공포(받침) · 상부 보
+phase(() => {
+  for (const x of XS) for (const z of XS) {
+    if (!(Math.abs(x) === 10 || Math.abs(z) === 10)) continue;
+    add('공포', 3, C.yellow, x - 0.5, 10, z - 0.5, 2, 1, 2, '');
+  }
+  fill('공포', 3, C.yellow, -11, 11, 11, 12, -11, 11, 1, 1, 1, (x, y, z) => x === -11 || x === 10 || z === -11 || z === 10);
+});
+// 5) 지붕 하단 (팔작 처마, 단청 띠: 주홍·황·녹청) + 몸체
+phase(() => {
+  const LH = [20, 18, 17, 15, 14], LZ = [16, 14, 13, 12, 11];
+  for (let k = 0; k < 5; k++) {
+    const band = k === 0 ? C.red : (k === 2 ? C.yellow : C.teal);
+    ring('지붕', 4, 12 + k, LH[k], LZ[k], 2, band);
+  }
+  fill('지붕', 4, C.roofBody, -12, 12, 12, 16, -10, 10, 2, 1, 2);
+});
+// 6) 지붕 상층 · 용마루
+phase(() => {
+  const UH = [11, 10, 9, 8, 7], UZ = [9, 8, 7, 6, 5];
+  for (let k = 0; k < 5; k++) ring('지붕', 5, 17 + k, UH[k], UZ[k], 2, k === 0 ? C.yellow : C.teal);
+  fill('지붕', 5, C.teal, -5, 5, 21, 22, -1, 1, 1, 1, 1);
+});
+// 7) 마당 품계석 두 줄
+phase(() => {
+  for (const x of [-11, 10]) for (let z = 20; z <= 36; z += 2) add('마당', 0, C.yard, x, 0, z, 1, 1, 1, '');
+});
+// 8) 기둥 보강 클램프 (목표 기둥 둘레, 보강 전에는 크기 0)
+phase(() => {
+  for (const j of JOINTS) for (const dx of [-1, 0, 1]) for (const dz of [-1, 0, 1]) {
+    if (!dx && !dz) continue;
+    add('기둥', 2, C.yellow, 10 + dx, j, 10 + dz, 1, 1, 1, 'clamp');
+  }
+});
+
+const partIdx = PARTS.map(() => []);
+bricks.forEach((b, i) => partIdx[b.pi].push(i));
+const counts = partIdx.map(a => a.length);
+const TOTAL = bricks.length;
+let mnX = 1e9, mnY = 1e9, mnZ = 1e9, mxX = -1e9, mxY = -1e9, mxZ = -1e9;
+for (const b of bricks) {
+  mnX = Math.min(mnX, b.x); mxX = Math.max(mxX, b.x + b.w);
+  mnY = Math.min(mnY, b.y); mxY = Math.max(mxY, b.y + b.h);
+  mnZ = Math.min(mnZ, b.z); mxZ = Math.max(mxZ, b.z + b.d);
+}
+const DIMS = { W: Math.round((mxX - mnX) * CM), H: Math.round((mxY - mnY) * CM), D: Math.round((mxZ - mnZ) * CM) };
+const TOP = mxY;
+const joint = { weakAt(r) { return JOINTS.filter(() => (1 + (r >= 0.5 ? 1 : 0)) < 2).length; } };
+
+/* ---------- three.js scene ---------- */
+const cv = document.getElementById('cv');
+const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, HH, false);
+renderer.setClearColor(C.ground, 1);
+const scene = new THREE.Scene();
+const cam = new THREE.OrthographicCamera(-34 * W / HH, 34 * W / HH, 34, -34, 0.1, 1000);
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+const sun = new THREE.DirectionalLight(0xffffff, 0.9); sun.position.set(60, 100, 40); scene.add(sun);
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), new THREE.MeshBasicMaterial({ color: C.ground }));
+ground.rotation.x = -Math.PI / 2; scene.add(ground);
+// 뒤쪽 인왕산 실루엣 (직접 만든 윤곽선)
+const sh = new THREE.Shape(); sh.moveTo(-160, 0);
+for (let x = -160; x <= 160; x += 4) {
+  const y = 20 + 14 * Math.sin(x * 0.045) + 8 * Math.sin(x * 0.13 + 1.2) + 5 * Math.sin(x * 0.31)
+    + (x > -40 && x < 20 ? 16 * Math.exp(-((x + 10) ** 2) / 200) : 0);
+  sh.lineTo(x, Math.max(2, y));
+}
+sh.lineTo(160, 0); sh.closePath();
+const mountain = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshBasicMaterial({ color: C.mount }));
+mountain.position.z = -70; scene.add(mountain);
+
+// 파트별 인스턴스 메시 (브릭 · 스터드 · 와이어프레임)
+const brickGeo = new THREE.BoxGeometry(1, 1, 1);
+const studGeo = new THREE.CylinderGeometry(0.28, 0.28, 1, 12);
+const PM = PARTS.map((name, pi) => {
+  const idx = partIdx[pi], n = idx.length;
+  const solidMat = new THREE.MeshLambertMaterial({ transparent: true, opacity: 1 });
+  const studMat = new THREE.MeshLambertMaterial({ transparent: true, opacity: 1 });
+  const wireMat = new THREE.MeshBasicMaterial({ color: C.ink, wireframe: true, transparent: true, opacity: 0, depthWrite: false });
+  const solid = new THREE.InstancedMesh(brickGeo, solidMat, n);
+  const stud = new THREE.InstancedMesh(studGeo, studMat, n);
+  const wire = new THREE.InstancedMesh(brickGeo, wireMat, n);
+  wire.instanceMatrix = solid.instanceMatrix;
+  scene.add(solid, stud, wire);
+  return { name, idx, solid, stud, wire, solidMat, studMat, wireMat };
+});
+
+// 결합부 점검 마커 (기둥 결합부 경고)
+const markerGeo = new THREE.SphereGeometry(0.5, 16, 12);
+const markers = JOINTS.map(j => {
+  const m = new THREE.Mesh(markerGeo, new THREE.MeshBasicMaterial({ color: C.orange }));
+  m.position.set(13.2, j + 0.5, 13.2); scene.add(m); return m;
+});
+
+// 바운딩 박스 선 (0–7s)
+const bbGeo = new THREE.BufferGeometry();
+const cornerOf = i => new THREE.Vector3(i & 1 ? mxX : mnX, i & 2 ? mxY : mnY, i & 4 ? mxZ : mnZ);
+const bbPos = [];
+for (let i = 0; i < 8; i++) for (const bit of [1, 2, 4]) {
+  if (i & bit) continue;
+  const a = cornerOf(i), b = cornerOf(i | bit);
+  bbPos.push(a.x, a.y, a.z, b.x, b.y, b.z);
+}
+bbGeo.setAttribute('position', new THREE.Float32BufferAttribute(bbPos, 3));
+const bbMat = new THREE.LineBasicMaterial({ color: C.orange, transparent: true, opacity: 1 });
+const bbLine = new THREE.LineSegments(bbGeo, bbMat); scene.add(bbLine);
+
+const BUILD_MS = Math.round(performance.now() - T_BUILD);
+
+/* ---------- timeline ---------- */
+const PV = new THREE.Vector3(), SV = new THREE.Vector3(), Q0 = new THREE.Quaternion();
+const M = new THREE.Matrix4(), TC = new THREE.Color(), tgt = new THREE.Vector3();
+const BLUE = new THREE.Color(C.blue), ORANGE = new THREE.Color(C.orange);
+function mono(c) { const l = c.r * 0.3 + c.g * 0.59 + c.b * 0.11; const v = 0.18 + l * 0.7; return new THREE.Color(v, v * 0.98, v * 0.94); }
+function explode(t) { if (t < 1.5) return 0; if (t < 4) return smooth(1.5, 4, t); if (t < 6) return 1; return 1 - smooth(6, 7, t); }
+function wireOp(t) { return smooth(7, 8, t) * (1 - smooth(12.8, 13.6, t)); }
+function opacityFor(p, t) {
+  const roof = p === '지붕', col = p === '기둥';
+  if (t < 7) return 1;
+  if (t < 8) return 1 - 0.88 * smooth(7, 8, t);
+  if (t < 13) return 0.12;
+  if (t < 17) return roof ? 0.12 + 0.88 * smooth(13, 14, t) : 0.12 + 0.08 * smooth(13, 14, t);
+  if (t < 22.5) return col ? 1 : (roof ? 1 - 0.92 * smooth(17, 18, t) : 0.2 - 0.12 * smooth(17, 18, t));
+  const f = smooth(22.5, 23.5, t);
+  return col ? 1 - 0.94 * f : 0.08 - 0.02 * f;
+}
+function colorOf(b, t) {
+  let c = b.col;
+  if (t >= 7 && t < 13) {                       // 결합부 하이라이트: 아래→위, 주황 전선 / 지나간 곳 파랑
+    const front = -1 + (TOP + 2) * smooth(7.5, 12.5, t);
+    const cy = b.y + b.h / 2;
+    if (cy < front - 1.2) c = BLUE; else if (cy <= front + 1.2) c = ORANGE;
+  }
+  if (t >= 13) {                                // 모노톤 복귀 (지붕·목표 기둥은 색 유지)
+    const keep = b.part === '지붕' || b.tag === 'target' || b.tag === 'clamp';
+    c = BLUE.clone().lerp(keep ? b.col : mono(b.col), smooth(13, 14.5, t));
+  }
+  TC.copy(c);
+  return TC;
+}
+
+const dom = id => document.getElementById(id);
+const el = { dW: dom('dW'), dH: dom('dH'), dD: dom('dD'), rN: dom('rN'), wN: dom('wN'), inv: dom('inv'), stats: dom('stats'),
+  callRoof: dom('callRoof'), warn: dom('warn'), ld: dom('ld'), ldc: dom('ldc'), tc: dom('tc') };
+const cards = PARTS.map((name, i) => {
+  const d = document.createElement('div'); d.className = 'card';
+  d.innerHTML = `<div class="ic">${ICON[name]}</div><div class="sw" style="background:#${PCOLOR[name].toString(16).padStart(6, '0')};border:1px solid #2A2622"></div><div class="nm">${name}</div><div class="n">0</div>`;
+  el.inv.appendChild(d); return d;
+});
+const statEls = [0, 1, 2, 3, 4, 5].map(i => dom('s' + i));
+
+function render(t) {
+  const e = explode(t), R = smooth(18.5, 20, t);
+  const cf = smooth(17, 18, t) - smooth(22.5, 23.5, t);
+  cam.zoom = 1 + 2.2 * cf; cam.updateProjectionMatrix();
+  tgt.lerpVectors(CENTER, COLT, cf);
+  cam.position.copy(tgt).add(DIR); cam.lookAt(tgt);
+  const wo = wireOp(t);
+
+  for (const P of PM) {
+    const op = opacityFor(P.name, t);
+    P.solidMat.opacity = op; P.studMat.opacity = op;
+    P.solid.visible = op > 0.002; P.stud.visible = op > 0.002;
+    P.wireMat.opacity = wo; P.wire.visible = wo > 0.002;
+    for (let k = 0; k < P.idx.length; k++) {
+      const b = bricks[P.idx[k]];
+      const s = b.tag === 'clamp' ? Math.max(1e-4, R) : 1;
+      const dy = e * b.lvl * 2.2;
+      const cx = b.x + b.w / 2, cy = b.y + b.h / 2 + dy, cz = b.z + b.d / 2;
+      const hh = b.h * 0.96 * s;
+      PV.set(cx, cy, cz); SV.set(b.w * 0.96 * s, hh, b.d * 0.96 * s);
+      M.compose(PV, Q0, SV); P.solid.setMatrixAt(k, M);
+      PV.set(cx, cy + hh / 2 + 0.11 * s, cz); SV.set(s, 0.22 * s, s);
+      M.compose(PV, Q0, SV); P.stud.setMatrixAt(k, M);
+      const cc = colorOf(b, t);
+      P.solid.setColorAt(k, cc); P.stud.setColorAt(k, cc);
+    }
+    P.solid.instanceMatrix.needsUpdate = true; P.stud.instanceMatrix.needsUpdate = true;
+    P.solid.instanceColor.needsUpdate = true; P.stud.instanceColor.needsUpdate = true;
+  }
+
+  // 0–7s: 바운딩 박스 + 실측 카운트업
+  bbMat.opacity = 1 - smooth(6.9, 7.5, t);
+  bbLine.visible = bbMat.opacity > 0.01;
+  bbGeo.setDrawRange(0, Math.min(12, Math.ceil(smooth(0, 1.5, t) * 12)) * 2);
+  dom('dims').style.opacity = 1 - smooth(6.9, 7.5, t);
+  const f = smooth(0.3, 5, t);
+  el.dW.textContent = fmt(DIMS.W * f); el.dH.textContent = fmt(DIMS.H * f); el.dD.textContent = fmt(DIMS.D * f);
+
+  // 13–17s: 지붕 지시선 + 브릭 수
+  const ro = smooth(13.4, 14.2, t) * (1 - smooth(16.4, 17, t));
+  el.callRoof.style.opacity = ro;
+  el.rN.textContent = fmt(counts[3]);
+  const rp = new THREE.Vector3(0, 21.5, 0).project(cam);
+  const sx = (rp.x + 1) / 2 * W, sy = (1 - rp.y) / 2 * HH;
+  el.ld.setAttribute('x1', sx); el.ld.setAttribute('y1', sy);
+  el.ld.setAttribute('x2', 1360); el.ld.setAttribute('y2', 225);
+  el.ldc.setAttribute('cx', sx); el.ldc.setAttribute('cy', sy);
+  el.ld.setAttribute('opacity', ro); el.ldc.setAttribute('opacity', ro);
+
+  // 17–23s: 결합부 경고 → 보강 → 0
+  const weak = joint.weakAt(R);
+  const mk = smooth(17, 17.5, t) * (1 - smooth(19, 19.6, t));
+  markers.forEach(m => m.scale.setScalar(Math.max(1e-4, mk)));
+  el.warn.style.opacity = smooth(16.8, 17.4, t) * (1 - smooth(23, 23.6, t));
+  el.wN.innerHTML = weak > 0 ? fmt(weak) : '<i style="color:#2A2622">✓</i> 0';
+
+  // 23–29s: 인벤토리 격자 스태거
+  el.inv.style.opacity = smooth(22.8, 23.6, t) * (1 - smooth(28.4, 29, t));
+  cards.forEach((d, i) => {
+    const o = smooth(23 + 0.5 * i, 23.8 + 0.5 * i, t);
+    d.style.opacity = o; d.style.transform = `translateY(${(1 - o) * 30}px)`;
+    d.querySelector('.n').textContent = fmt(counts[i]);
+  });
+
+  // 29–32s: 하단 통계 6칸 카운트업 (코드가 센 값)
+  el.stats.style.opacity = smooth(28.8, 29.4, t);
+  const g = smooth(29, 31, t);
+  const vals = [TOTAL, TIMELINE.filter(s => s.to > s.from).length, counts.filter(c => c > 0).length, BUILD_MS, stat.errors, joint.weakAt(1)];
+  vals.forEach((v, i) => { statEls[i].textContent = fmt(v * g); });
+
+  renderer.render(scene, cam);
+}
+
+/* ---------- controls ---------- */
+const range = dom('rng'), btn = dom('play');
+let T = 0, playing = false, last = 0;
+function setT(t) {
+  T = Math.max(0, Math.min(32, t));
+  range.value = Math.round(T * 1000);
+  render(T);
+  el.tc.textContent = T.toFixed(2).padStart(5, '0') + ' / 32.00 s';
+}
+range.addEventListener('input', () => { playing = false; btn.textContent = '▶'; setT(range.value / 1000); });
+btn.addEventListener('click', () => {
+  playing = !playing; btn.textContent = playing ? '❚❚' : '▶';
+  if (playing) { if (T >= 32) setT(0); last = performance.now(); requestAnimationFrame(loop); }
+});
+function loop(now) {
+  if (!playing) return;
+  const dt = (now - last) / 1000; last = now;
+  setT(T + dt);
+  if (T >= 32) { playing = false; btn.textContent = '▶'; return; }
+  requestAnimationFrame(loop);
+}
+const wrap = dom('wrap');
+function fit() {
+  const s = Math.min(innerWidth / W, (innerHeight - 44) / HH);
+  wrap.style.transform = `translate(${(innerWidth - W * s) / 2}px,${(innerHeight - 44 - HH * s) / 2}px) scale(${s})`;
+}
+addEventListener('resize', fit);
+fit();
+setT(0);
+</script>
+</body>
+</html>
