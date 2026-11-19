@@ -16,6 +16,17 @@ Vooy(AI 비서)가 같은 다섯 과제를 직접 구현한 결과와 검증 기
 | 실행 환경 | 파일 읽기·쓰기만 가능한 작업 환경. 브라우저 실행, 컴파일, 3D 출력은 하지 못함 |
 | 결과 반영 | 작업 환경에서 쓴 파일을 GitHub 웹 편집기로 옮겨 커밋(크기 대조) |
 
+## 데모 (GitHub Pages)
+
+배포 주소: https://sigco3111.github.io/vooy-benchmarks/
+
+- 과제 1 근정전: https://sigco3111.github.io/vooy-benchmarks/palace.html
+- 과제 2 한강시: https://sigco3111.github.io/vooy-benchmarks/hangang-city.html
+- 과제 3 소개 페이지: https://sigco3111.github.io/vooy-benchmarks/model-intro.html (원문 지시대로 `{{MODEL_NAME}}` 자리표시자가 그대로 보입니다)
+- 과제 5 미리보기(시뮬레이션): https://sigco3111.github.io/vooy-benchmarks/hardware/preview/index.html
+
+네 주소 모두 열리는 것까지만 확인했고, 화면 동작·콘솔 오류·fps는 확인하지 못했습니다.
+
 ## 과제별 결과
 
 | # | 과제 | 결과물 | 구현 노트 | 실행 검증 |
