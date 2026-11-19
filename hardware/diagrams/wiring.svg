@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" font-family="monospace" font-size="14">
+  <title>USB OBS 컨트롤러 배선도 - 핀 연결 그림 (전기 CAD 파일 아님)</title>
+  <style>
+    .box { fill:#fff; stroke:#222; stroke-width:2; }
+    .pin { fill:#333; font-size:12px; }
+    .sig { stroke:#1f618d; stroke-width:2; fill:none; }
+    .pwr { stroke:#c0392b; stroke-width:2; fill:none; }
+    .gnd { stroke:#555; stroke-width:2; fill:none; stroke-dasharray:6 3; }
+    .pu  { stroke:#1f618d; stroke-width:1.5; fill:none; stroke-dasharray:3 3; }
+    .lbl { font-size:13px; fill:#111; }
+    .small { font-size:11px; fill:#555; }
+    .head { font-size:16px; font-weight:bold; fill:#111; }
+    .dot { fill:#222; }
+  </style>
+
+  <text x="20" y="28" class="head">배선도: Pico 2 (RP2350) ↔ OLED / 버튼 / LED / USB</text>
+  <text x="20" y="48" class="small">물리 핀 번호(1-40)와 GPIO. 2차 자료로 확인한 핀맵이며 실물 재확인 전 미검증. 전기 CAD 파일이 아닌 연결 그림이다.</text>
+
+  <!-- Pico 2 block: x 440-760 -->
+  <rect x="440" y="90" width="320" height="300" class="box" rx="6"/>
+  <text x="600" y="115" text-anchor="middle" class="head">Raspberry Pi Pico 2</text>
+  <text x="600" y="134" text-anchor="middle" class="small">micro-USB (VBUS 5 V 입력), VSYS 외부 입력 없음</text>
+  <text x="458" y="175" class="pin">pin 6  GP4  I2C0 SDA</text>
+  <text x="458" y="200" class="pin">pin 7  GP5  I2C0 SCL</text>
+  <text x="458" y="225" class="pin">pin 36 3V3 (OUT)</text>
+  <text x="458" y="250" class="pin">pin 38 GND</text>
+  <text x="458" y="300" class="pin">pin 17 GP13 BTN_SCENE</text>
+  <text x="458" y="325" class="pin">pin 19 GP14 BTN_REC</text>
+  <text x="458" y="350" class="pin">pin 20 GP15 LED_REC</text>
+  <text x="458" y="375" class="pin">pin 37 3V3_EN / pin 39 VSYS: 미연결</text>
+
+  <!-- OLED block: x 60-310 -->
+  <rect x="60" y="110" width="250" height="200" class="box" rx="6"/>
+  <text x="185" y="135" text-anchor="middle" class="head">OLED 128x64</text>
+  <text x="185" y="154" text-anchor="middle" class="small">Adafruit 938, SSD1306, I2C 0x3C</text>
+  <text x="80" y="190" class="lbl">GND</text>
+  <text x="80" y="216" class="lbl">VCC (3.3 V)</text>
+  <text x="80" y="242" class="lbl">SCL</text>
+  <text x="80" y="268" class="lbl">SDA</text>
+  <circle cx="310" cy="186" r="3" class="dot"/>
+  <circle cx="310" cy="212" r="3" class="dot"/>
+  <circle cx="310" cy="238" r="3" class="dot"/>
+  <circle cx="310" cy="264" r="3" class="dot"/>
+  <!-- GND -> pin 38 (y250) -->
+  <path d="M310 186 L345 186 L345 250 L440 250" class="gnd"/>
+  <!-- VCC -> pin 36 (y225) -->
+  <path d="M310 212 L360 212 L360 225 L440 225" class="pwr"/>
+  <!-- SCL -> pin 7 (y200) -->
+  <path d="M310 238 L375 238 L375 200 L440 200" class="sig"/>
+  <!-- SDA -> pin 6 (y175) -->
+  <path d="M310 264 L390 264 L390 175 L440 175" class="sig"/>
+  <text x="150" y="335" class="small">풀업 4.7 kΩ × 2 (SDA, SCL → 3V3), 보드 내장 여부 미확인</text>
+
+  <!-- Keypad block: x 60-360, y 400-660 -->
+  <rect x="60" y="400" width="300" height="260" class="box" rx="6"/>
+  <text x="210" y="425" text-anchor="middle" class="head">키패드 기판</text>
+  <text x="210" y="444" text-anchor="middle" class="small">SW1 REC, SW2 SCENE, D1 LED (5 mm 빨강)</text>
+  <text x="80" y="480" class="lbl">SW1 한쪽 → GP14 (pin 19)</text>
+  <text x="80" y="506" class="lbl">SW1 다른쪽 → GND 공통선</text>
+  <text x="80" y="540" class="lbl">SW2 한쪽 → GP13 (pin 17)</text>
+  <text x="80" y="566" class="lbl">SW2 다른쪽 → GND 공통선</text>
+  <text x="80" y="600" class="lbl">GP15 (pin 20) → R1 330Ω → D1 애노드</text>
+  <text x="80" y="626" class="lbl">D1 캐소드 → GND 공통선</text>
+  <text x="80" y="650" class="small">GND 공통선은 Pico pin 38 에 연결</text>
+
+  <!-- keypad signals to Pico -->
+  <path d="M360 480 L400 480 L400 300 L440 300" class="sig"/>
+  <path d="M360 540 L390 540 L390 325 L440 325" class="sig"/>
+  <path d="M360 600 L420 600 L420 350 L440 350" class="sig"/>
+  <!-- GND common line to pin 38 -->
+  <path d="M360 506 L430 506 L430 250" class="gnd"/>
+  <path d="M360 566 L430 566" class="gnd"/>
+  <path d="M360 626 L430 626" class="gnd"/>
+
+  <!-- USB host block -->
+  <rect x="860" y="110" width="300" height="160" class="box" rx="6"/>
+  <text x="1010" y="135" text-anchor="middle" class="head">촬영 PC (호스트)</text>
+  <text x="880" y="162" class="lbl">USB 포트 ↔ micro-USB 케이블</text>
+  <text x="880" y="188" class="lbl">USB CDC: BTN / ST 줄 단위 텍스트</text>
+  <text x="880" y="214" class="lbl">host/obs_bridge.py → OBS (obs-websocket v5)</text>
+  <path d="M760 190 L860 190" class="pwr"/>
+  <text x="790" y="182" class="small">VBUS 5 V</text>
+
+  <!-- legend -->
+  <text x="860" y="320" class="head">범례</text>
+  <path d="M860 340 L900 340" class="pwr"/><text x="910" y="344" class="lbl">전원 (5 V / 3.3 V)</text>
+  <path d="M860 366 L900 366" class="sig"/><text x="910" y="370" class="lbl">신호</text>
+  <path d="M860 392 L900 392" class="gnd"/><text x="910" y="396" class="lbl">GND 귀환</text>
+  <path d="M860 418 L900 418" class="pu"/><text x="910" y="422" class="lbl">풀업 저항 (4.7 kΩ)</text>
+
+  <text x="860" y="460" class="head">점검 메모</text>
+  <text x="860" y="484" class="small">1. 버튼 활성 LOW, Pico 내부 풀업 사용</text>
+  <text x="860" y="504" class="small">2. LED 전류 약 3.9 mA (3.3 V, Vf 2.0 V 가정)</text>
+  <text x="860" y="524" class="small">3. OLED 주소 0x3C (0x3D 는 펌웨어 설정 변경)</text>
+  <text x="860" y="544" class="small">4. 3V3_EN, VSYS, RUN: 연결 없음</text>
+  <text x="860" y="564" class="small">5. 실물 핀 재확인과 연속성 측정 전 미검증</text>
+
+  <text x="20" y="725" class="small">배선 목록 전체는 WIRING.md 참조. 이 그림은 연결 관계 설명용이며 PCB 설계 파일이 아니다.</text>
+</svg>
