@@ -174,6 +174,11 @@ function slope(a,b,w,ya,yb,parent,hex){
 const DS={cbd:[1,2,[50,120],4,['#8393a6','#6c7c93','#a6b1bf','#55657c']],mid:[2,2,[24,50],4,['#e7e0d3','#cfc6b6','#b8c4c9']],
   house:[3,3,[6,13],3,['#eadbc3','#d9c7ad','#cbd8d0','#e5b8a2','#bcccdf']],mixed:[2,2,[14,32],4,['#d9d3c9','#bab3a7','#c9b49b']],riv:[2,1,[8,16],4,['#d9d3c9','#bab3a7']]};
 function distr(c,r){if(STAIRS.some(s=>s[0]===c&&s[1]===r))return'stair';if(r===5||r===6)return'riv';if(c>=3&&c<=8&&r>=1&&r<=4)return'cbd';if(c>=3&&c<=8&&r>=7&&r<=10)return'mid';if(c<=1||c>=10||r===0||r===11)return'house';return'mixed';}
+const DBMAT=new THREE.MeshStandardMaterial({color:0x9aa3ad,roughness:.8});
+function dbox(g,x0,y0,z0,x1,y1,z1){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(x1-x0,y1-y0,z1-z0),DBMAT);
+  m.position.set((x0+x1)/2,(y0+y1)/2,(z0+z1)/2);m.castShadow=true;g.add(m);
+}
 function signAt(det,L,blk,k){
   const ds=[[L.z0-blk.z0,'n'],[blk.z1-L.z1,'s'],[L.x0-blk.x0,'w'],[blk.x1-L.x1,'e']].sort((a,b)=>a[0]-b[0])[0][1];
   const m=new THREE.Mesh(SGEO,SIGNMAT[k]),cx=(L.x0+L.x1)/2,cz=(L.z0+L.z1)/2,y=4.2;
@@ -206,7 +211,7 @@ for(let c=0;c<12;c++)for(let r=0;r<12;r++){
       const lx0=ix0+a*(lw+g)+rnd()*1.2,lz0=iz0+b*(lh+g)+rnd()*1.2,lx1=ix0+a*(lw+g)+lw-rnd()*1.2,lz1=iz0+b*(lh+g)+lh-rnd()*1.2;
       const h=Math.round(lerp(hr[0],hr[1],rnd())),col=pick(pal);
       box(B,lx0,0,lz0,lx1,h,lz1,col,true);
-      if(rnd()<.5)box(det,lx0+1,h,lz0+1,lx0+3.5,h+1.4,lz0+3,'#9aa3ad');
+      if(rnd()<.5)dbox(det,lx0+1,h,lz0+1,lx0+3.5,h+1.4,lz0+3);
       if(h>24&&rnd()<.4){const mx=(lx0+lx1)/2,mz=(lz0+lz1)/2;box(B,mx-.1,h,mz-.1,mx+.1,h+8,mz+.1,'#d0d4da');}
       const L={x0:lx0,x1:lx1,z0:lz0,z1:lz1,h};addSol(L);bl.push(L);LOTS.push(L);
     }
