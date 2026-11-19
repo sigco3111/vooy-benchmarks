@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="ko" data-theme="paper">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{{MODEL_NAME}} — 생각이 형태가 되는 순간</title>
+<meta name="description" content="{{MODEL_NAME}}를 소개하는 단일 페이지">
+<script>
+(function(){
+  var t = null;
+  try { t = localStorage.getItem('intro-theme'); } catch (e) {}
+  if (t !== 'ink' && t !== 'paper') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'ink' : 'paper';
+  document.documentElement.dataset.theme = t;
+})();
+</script>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+</script>
+<style>
+:root{
+  --bg:#F3EFE7; --ink:#1A1714; --muted:rgba(26,23,20,.68); --line:rgba(26,23,20,.16);
+  --panel:rgba(243,239,231,.8); --accent:#D8462B;
+  --serif:"Noto Serif KR","Nanum Myeongjo","Batang","Songti SC",Georgia,"Times New Roman",serif;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+}
+[data-theme="ink"]{
+  --bg:#14120F; --ink:#EDE8DE; --muted:rgba(237,232,222,.7); --line:rgba(237,232,222,.2);
+  --panel:rgba(20,18,15,.82);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg);color:var(--ink);transition:background-color .6s,color .6s}
+body{font-family:var(--serif);background:var(--bg);color:var(--ink);overflow-x:hidden;-webkit-font-smoothing:antialiased;line-height:1.6}
+#stage{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;display:block}
+header{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:18px 6vw;font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+header em{font-style:normal;color:var(--muted)}
+button{font:inherit;cursor:pointer}
+#theme-btn{background:transparent;color:var(--ink);border:1px solid var(--line);padding:8px 12px;font-family:var(--mono);font-size:12px;letter-spacing:.06em}
+#theme-btn:focus-visible,.ask button:focus-visible,.demo input:focus-visible,.ask textarea:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+main{position:relative;z-index:1}
+.scene{min-height:100vh;min-height:100svh;display:flex;align-items:center;padding:14vh 7vw}
+.left{justify-content:flex-start}
+.right{justify-content:flex-end}
+.hero{flex-direction:column;justify-content:flex-end;align-items:center;text-align:center;padding-bottom:9vh}
+.hero .copy{background:none;border:0;padding:0;text-align:center}
+.copy{max-width:min(440px,100%);background:var(--panel);padding:22px 24px;border-left:2px solid var(--accent)}
+.label{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:14px}
+.label em{font-style:normal;color:var(--accent)}
+.scroll-hint{margin:22px 0 0}
+h2{font-size:clamp(26px,3.8vw,50px);font-weight:600;line-height:1.18;letter-spacing:-.01em;margin-bottom:16px;word-break:keep-all}
+.lead{font-size:clamp(15px,1.35vw,18px);color:var(--muted);line-height:1.75;word-break:keep-all}
+.stat{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em}
+.stat b{color:var(--accent);font-weight:500}
+.demo{margin-top:18px;display:grid;gap:10px;font-family:var(--mono);font-size:13px}
+.demo label{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.demo input[type=range]{accent-color:var(--accent);width:55%}
+.demo input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px}
+.demo output{color:var(--muted);font-size:12px;border-top:1px dashed var(--line);padding-top:8px}
+.ending{flex-direction:column;justify-content:center;text-align:center;padding:12vh 6vw 8vh}
+.ask-wrap{width:min(600px,100%);background:none;border:0;padding:0;text-align:left}
+.ask-wrap .label{text-align:center}
+.ask-wrap h2{text-align:center}
+.ask textarea{width:100%;min-height:96px;resize:vertical;background:var(--panel);border:1px solid var(--line);color:var(--ink);font:inherit;font-size:17px;padding:12px;line-height:1.5}
+.ask-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap}
+.ask-bar span,.echo,.foot{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.03em}
+.ask button{background:var(--accent);color:#fff;border:0;padding:12px 18px;font-family:var(--mono);font-size:13px;letter-spacing:.05em}
+.echo{min-height:1.5em;margin-top:12px;text-align:left;word-break:keep-all}
+.foot{margin-top:28px;text-align:center}
+.counter{position:fixed;left:6vw;bottom:20px;z-index:4;font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.14em;pointer-events:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:760px){
+  .scene{padding:12vh 6vw 10vh;align-items:flex-end}
+  .left,.right{justify-content:center}
+  .copy{background:var(--panel)}
+  h2{font-size:26px}
+  .counter{display:none}
+  header{padding:14px 5vw}
+  #theme-btn{padding:6px 9px;font-size:11px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{transition:none}
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+<canvas id="stage" aria-hidden="true"></canvas>
+<header>
+  <span>{{MODEL_NAME}} <em>/ intro</em></span>
+  <button type="button" id="theme-btn">먹 테마로</button>
+</header>
+<div class="counter" id="counter" aria-hidden="true">01 / 06</div>
+
+<main>
+  <section class="scene hero" data-scene="0" aria-label="{{MODEL_NAME}} 소개">
+    <h1 class="sr">{{MODEL_NAME}}</h1>
+    <div class="copy reveal">
+      <span class="label"><em>001</em> — 생각이 형태가 되는 순간</span>
+      <p class="lead">커서를 따라 입자가 휘고, 이름이 한 점씩 모여 앉습니다.</p>
+      <span class="label scroll-hint">scroll ↓</span>
+    </div>
+  </section>
+
+  <section class="scene right" data-scene="1">
+    <div class="copy reveal">
+      <span class="label"><em>002</em> — REASONING</span>
+      <h2>생각은 갈라지고,<br>한 길만 빛납니다.</h2>
+      <p class="lead">여러 갈래를 펼쳐 보고, 근거가 닿는 경로를 골라 끝까지 따라갑니다.</p>
+      <div class="stat">추론 벤치마크 <b>[측정값 대기]</b></div>
+    </div>
+  </section>
+
+  <section class="scene left" data-scene="2">
+    <div class="copy reveal">
+      <span class="label"><em>003</em> — CODING</span>
+      <h2>코드 줄이 흘러내려,<br>돌아가는 UI가 됩니다.</h2>
+      <p class="lead">아래 작은 조작부는 실제로 동작합니다. 이 페이지 안에서만 돕니다.</p>
+      <div class="demo" aria-label="로컬 조작부">
+        <label><span>자동 저장</span><input type="checkbox" id="demo-toggle" checked></label>
+        <label><span>밀도</span><input type="range" id="demo-range" min="1" max="10" value="5"></label>
+        <output id="demo-out" for="demo-toggle demo-range">밀도 5 · 자동 저장 켜짐</output>
+      </div>
+      <div class="stat">코딩 벤치마크 <b>[측정값 대기]</b></div>
+    </div>
+  </section>
+
+  <section class="scene right" data-scene="3">
+    <div class="copy reveal">
+      <span class="label"><em>004</em> — 1M CONTEXT</span>
+      <h2>책 수천 쪽이,<br>한 점으로 모입니다.</h2>
+      <p class="lead">한 번에 붙잡는 맥락의 길이. 긴 문서를 통째로 읽고 흐름을 놓치지 않습니다.</p>
+      <div class="stat">컨텍스트 회상 <b>[측정값 대기]</b></div>
+    </div>
+  </section>
+
+  <section class="scene left" data-scene="4">
+    <div class="copy reveal">
+      <span class="label"><em>005</em> — AGENTS</span>
+      <h2>여러 작업이 동시에 돌고,<br>한곳에서 합쳐집니다.</h2>
+      <p class="lead">나눠 맡긴 노드가 함께 움직이고, 결과는 하나의 답으로 모입니다.</p>
+      <div class="stat">오케스트레이션 지연 <b>[측정값 대기]</b></div>
+    </div>
+  </section>
+
+  <section class="scene ending" data-scene="5" aria-label="질문하기">
+    <div class="ask-wrap reveal">
+      <span class="label"><em>006</em> — ASK</span>
+      <h2>{{MODEL_NAME}}에게 무엇을 물어볼까요?</h2>
+      <form class="ask" id="ask" autocomplete="off">
+        <label class="sr" for="q">질문</label>
+        <textarea id="q" rows="3" maxlength="300" placeholder="질문을 적어 주세요"></textarea>
+        <div class="ask-bar">
+          <span>외부로 전송되지 않는 로컬 입력</span>
+          <button type="submit">{{MODEL_NAME}}에게 물어보기 →</button>
+        </div>
+      </form>
+      <p class="echo" id="ask-echo" aria-live="polite"></p>
+      <p class="foot">{{MODEL_NAME}} · 성능 수치는 측정 후 채웁니다 · [측정값 대기]</p>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+<script>
+(function(){
+  var root = document.documentElement, btn = document.getElementById('theme-btn');
+  function label(){ btn.textContent = root.dataset.theme === 'ink' ? '오프화이트 테마로' : '먹 테마로'; }
+  label();
+  btn.addEventListener('click', function(){
+    var next = root.dataset.theme === 'ink' ? 'paper' : 'ink';
+    root.dataset.theme = next;
+    try { localStorage.setItem('intro-theme', next); } catch (e) {}
+    label();
+    window.dispatchEvent(new Event('themechange'));
+  });
+
+  var tg = document.getElementById('demo-toggle'), rg = document.getElementById('demo-range'), out = document.getElementById('demo-out');
+  function upd(){ out.textContent = '밀도 ' + rg.value + ' · 자동 저장 ' + (tg.checked ? '켜짐' : '꺼짐'); }
+  tg.addEventListener('change', upd);
+  rg.addEventListener('input', upd);
+  upd();
+
+  var f = document.getElementById('ask'), q = document.getElementById('q'), echo = document.getElementById('ask-echo');
+  f.addEventListener('submit', function(e){
+    e.preventDefault();
+    var v = q.value.trim();
+    if (!v) { echo.textContent = '질문을 먼저 적어 주세요.'; return; }
+    echo.textContent = '접수(이 브라우저 안에서만, 전송 없음): ' + v;
+    q.value = '';
+  });
+})();
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+const SERIF = '"Noto Serif KR","Nanum Myeongjo",Georgia,serif';
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const TOUCH = matchMedia('(pointer: coarse)').matches || innerWidth < 800;
+const N = TOUCH ? 3800 : 8000;
+const FOV = 45, DIST = 60;
+const VH = Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * DIST;
+const ACC = new THREE.Color('#D8462B');
+const BASE = { paper: new THREE.Color('#1A1714'), ink: new THREE.Color('#EDE8DE') };
+const canvasEl = document.getElementById('stage');
+const counterEl = document.getElementById('counter');
+
+let renderer = null;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas: canvasEl, alpha: true, antialias: false, powerPreference: 'high-performance' });
+} catch (e) {
+  canvasEl.style.display = 'none';
+}
+if (renderer) boot();
+
+function curTheme(){ return document.documentElement.dataset.theme === 'ink' ? 'ink' : 'paper'; }
+
+function rr(x, px, py, w, h, r){
+  x.beginPath();
+  x.moveTo(px + r, py);
+  x.arcTo(px + w, py, px + w, py + h, r);
+  x.arcTo(px + w, py + h, px, py + h, r);
+  x.arcTo(px, py + h, px, py, r);
+  x.arcTo(px, py, px + w, py, r);
+  x.closePath();
+}
+
+function ringSegs(segs, cx, cy, r, f){
+  let px = cx + r, py = cy;
+  for (let k = 1; k <= 28; k++){
+    const a = k / 28 * Math.PI * 2, nx = cx + Math.cos(a) * r, ny = cy + Math.sin(a) * r;
+    segs.push([px, py, nx, ny, f]);
+    px = nx; py = ny;
+  }
+}
+
+// 코딩 장면: 왼쪽 코드 줄(흰색, 키워드는 주황), 오른쪽 작은 UI 창
+function drawCoding(x, W, H, P){
+  x.lineJoin = 'round';
+  const codeX = P ? 0.08 * W : 0.07 * W, codeW = P ? 0.84 * W : 0.40 * W;
+  const codeY = P ? 0.08 * H : 0.14 * H, codeH = P ? 0.34 * H : 0.70 * H;
+  const rows = 12, rh = codeH / rows, ind = [0,1,1,2,2,1,0,1,2,2,1,0];
+  for (let r = 0; r < rows; r++){
+    const y = codeY + r * rh + rh * 0.28, h = rh * 0.36;
+    const x0 = codeX + ind[r] * 0.035 * W;
+    const len = (0.3 + ((r * 37) % 11) / 16) * codeW * 0.62;
+    x.fillStyle = '#fff'; rr(x, x0, y, len, h, 3); x.fill();
+    if (r % 3 === 0){ x.fillStyle = '#f00'; rr(x, x0, y, 0.05 * W, h, 3); x.fill(); }
+  }
+  const ux = P ? 0.08 * W : 0.56 * W, uw = P ? 0.84 * W : 0.36 * W;
+  const uy = P ? 0.52 * H : 0.14 * H, uh = P ? 0.40 * H : 0.70 * H;
+  x.strokeStyle = '#fff'; x.lineWidth = Math.max(3, W * 0.005);
+  rr(x, ux, uy, uw, uh, 10); x.stroke();
+  x.fillStyle = '#fff'; x.fillRect(ux, uy + uh * 0.13, uw, Math.max(2, W * 0.003));
+  x.fillStyle = '#f00'; rr(x, ux + uw * 0.08, uy + uh * 0.22, uw * 0.36, uh * 0.1, 6); x.fill();
+  x.strokeStyle = '#fff'; rr(x, ux + uw * 0.5, uy + uh * 0.22, uw * 0.38, uh * 0.1, 6); x.stroke();
+  const tx = ux + uw * 0.08, tw = uw * 0.18, ty = uy + uh * 0.38, th = uh * 0.09;
+  x.strokeStyle = '#fff'; rr(x, tx, ty, tw, th, th / 2); x.stroke();
+  x.fillStyle = '#f00'; x.beginPath(); x.arc(tx + tw - th / 2, ty + th / 2, th * 0.36, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#fff';
+  x.fillRect(ux + uw * 0.08, uy + uh * 0.55, uw * 0.84, Math.max(3, uh * 0.012));
+  x.fillStyle = '#f00'; x.beginPath(); x.arc(ux + uw * 0.08 + uw * 0.84 * 0.62, uy + uh * 0.55 + 2, uh * 0.03, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#fff';
+  for (let j = 0; j < 6; j++){
+    const bh = uh * (0.06 + 0.04 * ((j * 3) % 5));
+    x.fillRect(ux + uw * 0.08 + j * uw * 0.14, uy + uh * 0.92 - bh, uw * 0.09, bh);
+  }
+}
+
+function boot(){
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, TOUCH ? 1.5 : 2));
+  renderer.setSize(innerWidth, innerHeight, false);
+  const scene3 = new THREE.Scene();
+  const aspect = () => innerWidth / innerHeight;
+  const camera = new THREE.PerspectiveCamera(FOV, aspect(), 0.1, 500);
+  camera.position.set(0, 0, DIST);
+
+  let seed = 12345;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+  function layout(){
+    const a = aspect(), portrait = a < 0.9;
+    const visW = VH * a;
+    const ratio = portrait ? 1.35 : 0.6;
+    let halfW = Math.min(26, visW * 0.86), halfH = halfW * ratio;
+    if (halfH > VH * 0.8){ halfH = VH * 0.8; halfW = halfH / ratio; }
+    return { portrait, ratio, halfW, halfH, S: halfW / 26 };
+  }
+  let L = layout();
+
+  function mkCanvas(){
+    const c = document.createElement('canvas');
+    c.width = 1000; c.height = Math.round(1000 * L.ratio);
+    return c;
+  }
+
+  // 캔버스 픽셀을 월드 좌표 점으로 바꾼다. 빨강(accent)으로 그린 픽셀은 강조 입자.
+  function fromCanvas(c, step){
+    const W = c.width, H = c.height;
+    const d = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W, H).data;
+    const out = [];
+    for (let y = 0; y < H; y += step) for (let x = 0; x < W; x += step){
+      const i = (y * W + x) * 4;
+      if (d[i + 3] < 128) continue;
+      out.push([(x / W - 0.5) * 2 * L.halfW, -(y / H - 0.5) * 2 * L.halfH, (rnd() - 0.5), (d[i] > 150 && d[i + 1] < 110) ? 1 : 0]);
+    }
+    return out;
+  }
+
+  // 선분 목록을 길이에 비례해 점으로 바꾼다. budget = N에 대한 점 비율.
+  function fromSegs(segs, budget){
+    let total = 0;
+    for (const s of segs) total += Math.hypot(s[2] - s[0], s[3] - s[1]);
+    const dens = (N * budget) / Math.max(total, 1);
+    const out = [];
+    for (const s of segs){
+      const len = Math.hypot(s[2] - s[0], s[3] - s[1]);
+      const n = Math.max(1, Math.round(len * dens));
+      for (let k = 0; k < n; k++){
+        const t = (k + 0.5) / n;
+        out.push([s[0] + (s[2] - s[0]) * t + (rnd() - 0.5) * 0.08, s[1] + (s[3] - s[1]) * t + (rnd() - 0.5) * 0.08, (rnd() - 0.5) * 0.8, s[4]]);
+      }
+    }
+    return out;
+  }
+
+  // 점 목록을 N개 입자에 배정. 모자라면 약간 흩어서 중복 배치.
+  function pack(pts){
+    if (!pts.length) pts = [[0, 0, 0, 0]];
+    const len = pts.length, idx = new Array(len);
+    for (let i = 0; i < len; i++) idx[i] = i;
+    for (let i = len - 1; i > 0; i--){ const j = (rnd() * (i + 1)) | 0; const t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
+    const pos = new Float32Array(N * 3), flag = new Uint8Array(N);
+    for (let i = 0; i < N; i++){
+      const dup = i >= len;
+      const p = dup ? pts[(rnd() * len) | 0] : pts[idx[i]];
+      const j = dup ? 0.14 : 0;
+      pos[i * 3] = p[0] + (rnd() - 0.5) * j;
+      pos[i * 3 + 1] = p[1] + (rnd() - 0.5) * j;
+      pos[i * 3 + 2] = p[2] + (rnd() - 0.5) * j;
+      flag[i] = p[3];
+    }
+    return { pos, flag };
+  }
+
+  function buildScenes(){
+    seed = 12345;
+    const S = L.S, out = [];
+
+    // 0 히어로: 모델 이름이 입자로 조립된다 (자리표시자 그대로)
+    {
+      const c = mkCanvas(), x = c.getContext('2d');
+      x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle';
+      const name = '{{MODEL_NAME}}';
+      x.font = '700 200px ' + SERIF;
+      const w = x.measureText(name).width;
+      const fs = Math.min(320, 200 * (c.width * 0.86) / w);
+      x.font = '700 ' + fs + 'px ' + SERIF;
+      x.fillText(name, c.width / 2, c.height / 2);
+      out.push(pack(fromCanvas(c, 2)));
+    }
+
+    // 1 추론: 가지 치는 사고 트리, 왼쪽 가지 하나가 주황으로 빛난다
+    {
+      const segs = [];
+      const br = (px, py, a, len, d, on) => {
+        const x2 = px + Math.sin(a) * len, y2 = py + Math.cos(a) * len;
+        segs.push([px, py, x2, y2, on ? 1 : 0]);
+        if (d > 0){
+          for (let k = 0; k < 2; k++) br(x2, y2, a + (k ? 1 : -1) * (0.3 + rnd() * 0.24), len * (0.7 + rnd() * 0.06), d - 1, on && k === 0);
+        }
+      };
+      br(0, -12 * S, 0, 4.8 * S, 5, true);
+      out.push(pack(fromSegs(segs, 0.9)));
+    }
+
+    // 2 코딩: 코드 줄과 작은 UI 창
+    {
+      const c = mkCanvas();
+      drawCoding(c.getContext('2d'), c.width, c.height, L.portrait);
+      out.push(pack(fromCanvas(c, 2)));
+    }
+
+    // 3 긴 맥락: 쌓인 책 페이지들이 나선으로 한 점에 빨려 든다
+    {
+      const pts = [], P = 34;
+      for (let i = 0; i < N * 0.94; i++){
+        const k = (rnd() * P) | 0, z = -16 + k * 1.15, r = (rnd() * 22) | 0, y = -10 + r * 0.9;
+        const lw = (r % 4 === 3) ? 0.4 : 1;
+        const x = -7.5 + rnd() * 15 * lw;
+        pts.push([x * S, y * S, z, 0]);
+      }
+      for (let j = 0; j < N * 0.06; j++){
+        const t = rnd(), th = t * 34, rad = (1 - t) * 5.2;
+        pts.push([Math.cos(th) * rad * S, Math.sin(th) * rad * S, -16 + t * 38, 1]);
+      }
+      out.push(pack(pts));
+    }
+
+    // 4 에이전트: 다섯 노드가 허브로 연결되고 가운데서 합쳐진다
+    {
+      const segs = [];
+      ringSegs(segs, 0, 0, 3.4 * S, 1);
+      for (let j = 0; j < 5; j++){
+        const a = Math.PI / 2 + j * Math.PI * 2 / 5, R = 11 * S, rad = 2.3 * S;
+        const nx = Math.cos(a) * R, ny = Math.sin(a) * R;
+        segs.push([Math.cos(a) * 3.4 * S, Math.sin(a) * 3.4 * S, nx - Math.cos(a) * rad, ny - Math.sin(a) * rad, 0]);
+        ringSegs(segs, nx, ny, rad, 1);
+        segs.push([nx - 1.3 * S, ny + 0.5 * S, nx + 1.3 * S, ny + 0.5 * S, 0]);
+        segs.push([nx - 1.3 * S, ny - 0.7 * S, nx + 0.2 * S, ny - 0.7 * S, 0]);
+      }
+      out.push(pack(fromSegs(segs, 0.9)));
+    }
+
+    // 5 엔딩: 입자가 모여 입력창이 된다
+    {
+      const w = 2 * L.halfW * 0.62, h = w * 0.2, segs = [];
+      const rect = (x0, y0, ww, hh, f) => {
+        segs.push([x0, y0, x0 + ww, y0, f], [x0 + ww, y0, x0 + ww, y0 + hh, f], [x0 + ww, y0 + hh, x0, y0 + hh, f], [x0, y0 + hh, x0, y0, f]);
+      };
+      rect(-w / 2, -h / 2, w, h, 1);
+      ringSegs(segs, w / 2 - h * 0.5, 0, h * 0.25, 1);
+      const pts = fromSegs(segs, 0.3);
+      for (let x0 = -w / 2 + h * 0.12; x0 < w / 2 - h * 0.3; x0 += h * 0.14)
+        for (let y0 = -h / 2 + h * 0.14; y0 < h / 2 - h * 0.1; y0 += h * 0.14)
+          pts.push([x0, y0, (rnd() - 0.5) * 0.6, 0]);
+      out.push(pack(pts));
+    }
+    return out;
+  }
+
+  let scenes = buildScenes();
+  const cur = new Float32Array(N * 3), tgt = new Float32Array(N * 3);
+  const curC = new Float32Array(N * 3), tgtC = new Float32Array(N * 3);
+  let flags = scenes[0].flag, sceneIdx = 0;
+  for (let i = 0; i < N; i++){
+    const r = 18 * Math.cbrt(rnd()), th = rnd() * Math.PI * 2, ph = Math.acos(2 * rnd() - 1);
+    cur[i * 3] = r * Math.sin(ph) * Math.cos(th);
+    cur[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
+    cur[i * 3 + 2] = r * Math.cos(ph);
+  }
+
+  function colorize(){
+    const b = BASE[curTheme()];
+    for (let i = 0; i < N; i++){
+      const c = flags[i] ? ACC : b;
+      tgtC[i * 3] = c.r; tgtC[i * 3 + 1] = c.g; tgtC[i * 3 + 2] = c.b;
+    }
+  }
+  function setScene(i){
+    sceneIdx = i;
+    tgt.set(scenes[i].pos);
+    flags = scenes[i].flag;
+    colorize();
+    counterEl.textContent = '0' + (i + 1) + ' / 06';
+  }
+  tgt.set(scenes[0].pos);
+  colorize();
+  curC.set(tgtC);
+
+  const geo = new THREE.BufferGeometry();
+  const pAttr = new THREE.BufferAttribute(cur, 3), cAttr = new THREE.BufferAttribute(curC, 3);
+  pAttr.setUsage(THREE.DynamicDrawUsage); cAttr.setUsage(THREE.DynamicDrawUsage);
+  geo.setAttribute('position', pAttr);
+  geo.setAttribute('color', cAttr);
+  const mat = new THREE.PointsMaterial({ size: TOUCH ? 0.26 : 0.2, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false });
+  const points = new THREE.Points(geo, mat);
+  scene3.add(points);
+
+  // 커서: 화면 좌표를 z=0 평면으로 옮긴다
+  let mx = 1e4, my = 1e4, mxs = 1e4, mys = 1e4;
+  const pointer = (e) => {
+    const nx = e.clientX / innerWidth * 2 - 1, ny = e.clientY / innerHeight * 2 - 1;
+    mx = nx * VH * aspect(); my = -ny * VH;
+  };
+  document.addEventListener('pointermove', pointer, { passive: true });
+  document.addEventListener('mouseleave', () => { mx = my = 1e4; });
+  window.addEventListener('themechange', colorize);
+
+  const K = REDUCED ? 1 : 0.05;
+  const AMP = REDUCED ? 0 : 0.22;
+  const R2 = (TOUCH ? 4 : 6) ** 2;
+  const t0 = performance.now();
+  let frames = 0, fpsT = t0;
+  window.__intro = { N, scene: () => sceneIdx, fps: 0, frames: 0 };
+
+  function frame(now){
+    const t = (now - t0) * 0.001;
+    mxs += (mx - mxs) * 0.15; mys += (my - mys) * 0.15;
+    for (let i = 0; i < N; i++){
+      const ix = i * 3, iy = ix + 1, iz = ix + 2;
+      let tx = tgt[ix], ty = tgt[iy], tz = tgt[iz];
+      if (AMP){
+        tx += Math.sin(t * 0.9 + i * 0.37) * AMP;
+        ty += Math.cos(t * 0.7 + i * 0.53) * AMP;
+        tz += Math.sin(t * 0.5 + i * 0.21) * AMP * 1.5;
+      }
+      let x = cur[ix] + (tx - cur[ix]) * K;
+      let y = cur[iy] + (ty - cur[iy]) * K;
+      const z = cur[iz] + (tz - cur[iz]) * K;
+      if (!REDUCED){
+        const dx = x - mxs, dy = y - mys, d2 = dx * dx + dy * dy;
+        if (d2 < R2){
+          const f = 1 - d2 / R2;
+          x += dx * f * 0.10 - dy * f * 0.05;
+          y += dy * f * 0.10 + dx * f * 0.05;
+        }
+      }
+      cur[ix] = x; cur[iy] = y; cur[iz] = z;
+      curC[ix] += (tgtC[ix] - curC[ix]) * 0.06;
+      curC[iy] += (tgtC[iy] - curC[iy]) * 0.06;
+      curC[iz] += (tgtC[iz] - curC[iz]) * 0.06;
+    }
+    pAttr.needsUpdate = true; cAttr.needsUpdate = true;
+    renderer.render(scene3, camera);
+    frames++;
+    if (now - fpsT > 1000){
+      window.__intro.fps = Math.round(frames * 1000 / (now - fpsT));
+      window.__intro.frames = frames;
+      frames = 0; fpsT = now;
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  let rt = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => {
+      renderer.setSize(innerWidth, innerHeight, false);
+      camera.aspect = aspect(); camera.updateProjectionMatrix();
+      L = layout();
+      scenes = buildScenes();
+      setScene(sceneIdx);
+    }, 250);
+  });
+
+  setScene(0);
+
+  if (window.gsap && window.ScrollTrigger){
+    gsap.registerPlugin(ScrollTrigger);
+    document.querySelectorAll('[data-scene]').forEach((el) => {
+      const i = +el.dataset.scene;
+      ScrollTrigger.create({
+        trigger: el, start: 'top 60%', end: 'bottom 40%',
+        onEnter: () => setScene(i), onEnterBack: () => setScene(i)
+      });
+    });
+    if (!REDUCED){
+      gsap.to(points.rotation, {
+        y: 0.35, z: -0.06, ease: 'none',
+        scrollTrigger: { trigger: 'main', start: 'top top', end: 'bottom bottom', scrub: 1 }
+      });
+      gsap.utils.toArray('.reveal').forEach((el) => {
+        gsap.from(el, { opacity: 0, y: 36, duration: 1.1, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 85%' } });
+      });
+    }
+  }
+}
+</script>
+</body>
+</html>
